@@ -1,0 +1,10 @@
+influxdb-client
+
+# fronius-symo
+pyModbusTCP
+
+# go_e_charger_control
+paho
+
+
+
