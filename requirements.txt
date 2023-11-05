@@ -5,6 +5,7 @@ pyModbusTCP
 
 # go_e_charger_control
 paho-mqtt
+requests
 
 
 
