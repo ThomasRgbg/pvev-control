@@ -315,7 +315,7 @@ class evcontrol:
             print("Tendency to Switch off, counter {0}".format(self.needtoswitchcounter))
 
             
-            if self.needtoswitchcounter >= 5 or force == True:
+            if self.needtoswitchcounter >= 20 or force == True:
                 self.needtoswitchcounter = 0
                 
                 print("Really Switch off")
