@@ -90,7 +90,7 @@ class evcontrol:
 
     def write_value_to_db(self, name, value, force = False):
         print("Write Value {0} = {1} to DB".format(name, value))
-        self.influxdb.write_sensordata('ev_golf', name, value, force)
+        self.influxdb.write_sensordata('ev_golf', name, value, timestamp=None, force=force)
 
     def change_mode(self, newmode):
         print("set new state: {0}".format(newmode))
