@@ -1,5 +1,6 @@
 # 
 # V1 Something to start with...
+# V2 Handle force parameter better
 #
 
 import influxdb_client
@@ -25,7 +26,7 @@ class influxdb_cli2:
         if self.debug:
             print("Got sample: location: {0}, measurement: {1}, value {2}, timestamp {3}".format(location,measurement,value, timestamp))
 
-        if force == None:
+        if force == None or force == False:
             if float(value) == 0.0:
                 if self.debug:
                     print("discarding value, since zero")
