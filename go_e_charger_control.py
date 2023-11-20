@@ -1,4 +1,8 @@
 #!/usr/bin/env python3
+
+# Version history
+# V1 Baseline
+# V2 fix consideration of min/max charging values
  
 from influxdb_cli2.influxdb_cli2 import influxdb_cli2
 from go_e_charger.go_e_charger_httpv2 import GoeCharger
@@ -138,12 +142,20 @@ class evcontrol:
                 self.power_available.append(power_now_available)
                 self.debugstate = 5
             else:
-                self.power_available.append(0.0)
                 print("-> PV-Generating at least more than 4*230.0W, but house takes it already")
+                if power_now_available <= self.min_charge_power:
+                    power_now_available = self.min_charge_power
+                if power_now_available >= self.max_charge_power:
+                    power_now_available = self.max_charge_power
+                self.power_available.append(0.0)
                 self.debugstate = 6
         else:
             self.power_available.append(0.0)
             print("Less than 4*230.0W generated")
+            if power_now_available <= self.min_charge_power:
+                power_now_available = self.min_charge_power
+            if power_now_available >= self.max_charge_power:
+                power_now_available = self.max_charge_power
             self.debugstate = 7
 
         self.do_switching(6*230.0)
