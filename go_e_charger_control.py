@@ -88,9 +88,9 @@ class evcontrol:
         else:
             print("could not get {0} from DB, do not change".format(name))
 
-    def write_setup_to_db(self, name, value):
-        print("Write Setting {0} = {1} to DB".format(name, value))
-        self.influxdb.write_sensordata('ev_golf', name, value)
+    def write_value_to_db(self, name, value, force = False):
+        print("Write Value {0} = {1} to DB".format(name, value))
+        self.influxdb.write_sensordata('ev_golf', name, value, force)
 
     def change_mode(self, newmode):
         print("set new state: {0}".format(newmode))
@@ -114,7 +114,7 @@ class evcontrol:
             self.min_charge_power = 0
         else:
             self.change_mode(1)
-        self.write_setup_to_db('mode', newmode)
+        self.write_value_to_db('mode', newmode, force=True)
     
     def state_max_auto_charging(self):
         self.update_values_before()
@@ -249,10 +249,6 @@ class evcontrol:
         self.update_values_after()
     
     def update_values_before(self):
-        influxdb_table = 'ev_golf'    
-
-        #self.go_e_charger.responses = go_e_charger.GetStatusAll()
-        # print(self.go_e_charger.responses)
 
         self.power_to_grid = self.gen24.read_data("Meter_Power_Total") * -1.0
         self.power_consumption = self.gen24.read_calculated_value("Consumption_Sum") 
@@ -262,35 +258,33 @@ class evcontrol:
         
         print("pwr_gen: {0}, pwr_grid: {1}, pwr_consum: {2}, pwr_ev: {3}".format(self.power_generated, self.power_to_grid, self.power_consumption, self.power_to_ev))
 
-        self.influxdb.write_sensordata(influxdb_table, 'power_to_ev', self.power_to_ev)
-        self.influxdb.write_sensordata(influxdb_table, 'charge_below_price', self.charge_below_price)
+        golfonso.write_value_to_db('power_to_ev', self.power_to_ev)
+        golfonso.write_value_to_db('charge_below_price', self.charge_below_price)
 
 
     def update_values_after(self):
-        influxdb_table = 'ev_golf'    
 
-        self.influxdb.write_sensordata(influxdb_table, 'debugstate', self.debugstate)
-        self.influxdb.write_sensordata(influxdb_table, 'power_available', statistics.fmean(self.power_available))
+        golfonso.write_value_to_db('debugstate', self.debugstate)
+        golfonso.write_value_to_db('power_available', statistics.fmean(self.power_available))
 
         go_e_charger_dump = go_e_charger.GetStatusAll(filtered=True)
         print(go_e_charger_dump)
 
-        self.influxdb.write_sensordata(influxdb_table, 'go_e_i_l1', go_e_charger_dump['i_l1'])
-        self.influxdb.write_sensordata(influxdb_table, 'go_e_i_l2', go_e_charger_dump['i_l2'])
-        self.influxdb.write_sensordata(influxdb_table, 'go_e_i_l3', go_e_charger_dump['i_l3'])
-        self.influxdb.write_sensordata(influxdb_table, 'go_e_p_all', go_e_charger_dump['p_all'])
+        golfonso.write_value_to_db('go_e_i_l1', go_e_charger_dump['i_l1'])
+        golfonso.write_value_to_db('go_e_i_l2', go_e_charger_dump['i_l2'])
+        golfonso.write_value_to_db('go_e_i_l3', go_e_charger_dump['i_l3'])
+        golfonso.write_value_to_db('go_e_p_all', go_e_charger_dump['p_all'])
 
 
-        self.influxdb.write_sensordata(influxdb_table, 'energy_total', go_e_charger_dump['energy_total'])
-        self.influxdb.write_sensordata(influxdb_table, 'energy_to_ev', go_e_charger_dump['energy_since_connect']/1000.0)
-        self.influxdb.write_sensordata(influxdb_table, 'km_to_ev', go_e_charger_dump['energy_since_connect']/1000.0 * (100/15))
-        self.influxdb.write_sensordata(influxdb_table, 'ev_charger_amps', go_e_charger_dump['charger_max_current'])
-        self.influxdb.write_sensordata(influxdb_table, 'ev_charger_phases', go_e_charger_dump['phase_switch_mode'])
+        golfonso.write_value_to_db('energy_total', go_e_charger_dump['energy_total'])
+        golfonso.write_value_to_db('energy_to_ev', go_e_charger_dump['energy_since_connect']/1000.0)
+        golfonso.write_value_to_db('km_to_ev', go_e_charger_dump['energy_since_connect']/1000.0 * (100/15))
+        golfonso.write_value_to_db('ev_charger_amps', go_e_charger_dump['charger_max_current'])
+        golfonso.write_value_to_db('ev_charger_phases', go_e_charger_dump['phase_switch_mode'])
 
 
 
     def do_switching(self, p_needed, force=False):
-        influxdb_table = 'ev_golf'    
         
         while len(self.power_available) > self.power_available_len:
             self.power_available.pop(0)    
@@ -307,7 +301,7 @@ class evcontrol:
             value = statistics.fmean(self.power_available)
             if self.go_e_charger.CableLocked() == True:
                 self.go_e_charger.setChargingP(value)
-            self.influxdb.write_sensordata(influxdb_table, 'ev_switch_state', 1 )
+            golfonso.write_value_to_db('ev_switch_state', 1 )
             
             self.go_e_charger.ForceOn = 1
             
@@ -323,7 +317,7 @@ class evcontrol:
                 self.needtoswitchcounter = 0
                 
                 print("Really Switch off")
-                self.influxdb.write_sensordata(influxdb_table, 'ev_switch_state', 0 )
+                golfonso.write_value_to_db('ev_switch_state', 0 )
                 self.go_e_charger.ForceOn = 0
 
         if statistics.fmean(self.power_available) > 100:
@@ -351,17 +345,16 @@ def on_message(client, userdata, msg):
         if int(msg.payload) >= 0 and int(msg.payload) <= 8000:
             print("MQTT max charge power {0}".format(msg.payload))
             golfonso.max_charge_power = int(msg.payload)
-            golfonso.write_setup_to_db('max_charge_power', golfonso.max_charge_power)
+            golfonso.write_value_to_db('max_charge_power', golfonso.max_charge_power, force=True)
     elif msg.topic == "pentling/ev_golf/min_charge_power":
         if int(msg.payload) >= 0 and int(msg.payload) <= 8000:
             print("MQTT min charge power {0}".format(msg.payload))
-            golfonso.min_charge_power = int(msg.payload)
-            golfonso.write_setup_to_db('min_charge_power', golfonso.min_charge_power)
+            golfonso.min_charge_power =min_charge_power int(msg.payload)
+            golfonso.write_value_to_db('min_charge_power', golfonso.min_charge_power, force=True)
     elif msg.topic == "pentling/ev_golf/charge_below_price":
         if float(msg.payload) >= 0.0 and float(msg.payload) <= 2.0:
             print("MQTT charge_below_price {0}".format(msg.payload))
-            golfonso.charge_below_price = float(msg.payload)
-            print(golfonso.charge_below_price)
+            golfonso.charge_below_price = float(msg.payload, force=True)
 
 mqtt= paho.Client()
 mqtt.on_connect = on_connect
