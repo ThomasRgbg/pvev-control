@@ -349,7 +349,7 @@ def on_message(client, userdata, msg):
     elif msg.topic == "pentling/ev_golf/min_charge_power":
         if int(msg.payload) >= 0 and int(msg.payload) <= 8000:
             print("MQTT min charge power {0}".format(msg.payload))
-            golfonso.min_charge_power =min_charge_power int(msg.payload)
+            golfonso.min_charge_power = int(msg.payload)
             golfonso.write_value_to_db('min_charge_power', golfonso.min_charge_power, force=True)
     elif msg.topic == "pentling/ev_golf/charge_below_price":
         if float(msg.payload) >= 0.0 and float(msg.payload) <= 2.0:
