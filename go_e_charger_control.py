@@ -258,29 +258,29 @@ class evcontrol:
         
         print("pwr_gen: {0}, pwr_grid: {1}, pwr_consum: {2}, pwr_ev: {3}".format(self.power_generated, self.power_to_grid, self.power_consumption, self.power_to_ev))
 
-        golfonso.write_value_to_db('power_to_ev', self.power_to_ev)
-        golfonso.write_value_to_db('charge_below_price', self.charge_below_price)
+        self.write_value_to_db('power_to_ev', self.power_to_ev)
+        self.write_value_to_db('charge_below_price', self.charge_below_price)
 
 
     def update_values_after(self):
 
-        golfonso.write_value_to_db('debugstate', self.debugstate)
-        golfonso.write_value_to_db('power_available', statistics.fmean(self.power_available))
+        self.write_value_to_db('debugstate', self.debugstate)
+        self.write_value_to_db('power_available', statistics.fmean(self.power_available))
 
         go_e_charger_dump = go_e_charger.GetStatusAll(filtered=True)
         print(go_e_charger_dump)
 
-        golfonso.write_value_to_db('go_e_i_l1', go_e_charger_dump['i_l1'])
-        golfonso.write_value_to_db('go_e_i_l2', go_e_charger_dump['i_l2'])
-        golfonso.write_value_to_db('go_e_i_l3', go_e_charger_dump['i_l3'])
-        golfonso.write_value_to_db('go_e_p_all', go_e_charger_dump['p_all'])
+        self.write_value_to_db('go_e_i_l1', go_e_charger_dump['i_l1'])
+        self.write_value_to_db('go_e_i_l2', go_e_charger_dump['i_l2'])
+        self.write_value_to_db('go_e_i_l3', go_e_charger_dump['i_l3'])
+        self.write_value_to_db('go_e_p_all', go_e_charger_dump['p_all'])
 
 
-        golfonso.write_value_to_db('energy_total', go_e_charger_dump['energy_total'])
-        golfonso.write_value_to_db('energy_to_ev', go_e_charger_dump['energy_since_connect']/1000.0)
-        golfonso.write_value_to_db('km_to_ev', go_e_charger_dump['energy_since_connect']/1000.0 * (100/15))
-        golfonso.write_value_to_db('ev_charger_amps', go_e_charger_dump['charger_max_current'])
-        golfonso.write_value_to_db('ev_charger_phases', go_e_charger_dump['phase_switch_mode'])
+        self.write_value_to_db('energy_total', go_e_charger_dump['energy_total'])
+        self.write_value_to_db('energy_to_ev', go_e_charger_dump['energy_since_connect']/1000.0)
+        self.write_value_to_db('km_to_ev', go_e_charger_dump['energy_since_connect']/1000.0 * (100/15))
+        self.write_value_to_db('ev_charger_amps', go_e_charger_dump['charger_max_current'])
+        self.write_value_to_db('ev_charger_phases', go_e_charger_dump['phase_switch_mode'])
 
 
 
@@ -301,7 +301,7 @@ class evcontrol:
             value = statistics.fmean(self.power_available)
             if self.go_e_charger.CableLocked() == True:
                 self.go_e_charger.setChargingP(value)
-            golfonso.write_value_to_db('ev_switch_state', 1 )
+            self.write_value_to_db('ev_switch_state', 1 )
             
             self.go_e_charger.ForceOn = 1
             
@@ -317,7 +317,7 @@ class evcontrol:
                 self.needtoswitchcounter = 0
                 
                 print("Really Switch off")
-                golfonso.write_value_to_db('ev_switch_state', 0 )
+                self.write_value_to_db('ev_switch_state', 0 )
                 self.go_e_charger.ForceOn = 0
 
         if statistics.fmean(self.power_available) > 100:
