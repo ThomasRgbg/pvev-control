@@ -143,18 +143,11 @@ class evcontrol:
                 self.debugstate = 5
             else:
                 print("-> PV-Generating at least more than 4*230.0W, but house takes it already")
-                if power_now_available <= self.min_charge_power:
-                    self.power_available.append(self.min_charge_power)
-                else:
-                    self.power_available.append(0.0)
+                self.power_available.append(self.min_charge_power)
                 self.debugstate = 6
         else:
-            self.power_available.append(0.0)
             print("Less than 4*230.0W generated")
-            if power_now_available <= self.min_charge_power:
-                self.power_available.append(self.min_charge_power)
-            else:
-                self.power_available.append(0.0)
+            self.power_available.append(self.min_charge_power)
             self.debugstate = 7
 
         self.do_switching(6*230.0)
