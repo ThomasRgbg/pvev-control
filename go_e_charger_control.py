@@ -354,7 +354,8 @@ def on_message(client, userdata, msg):
     elif msg.topic == "pentling/ev_golf/charge_below_price":
         if float(msg.payload) >= 0.0 and float(msg.payload) <= 2.0:
             print("MQTT charge_below_price {0}".format(msg.payload))
-            golfonso.charge_below_price = float(msg.payload, force=True)
+            golfonso.charge_below_price = float(msg.payload)
+            golfonso.write_value_to_db('charge_below_price', golfonso.charge_below_price, force=True)
 
 mqtt= paho.Client()
 mqtt.on_connect = on_connect
