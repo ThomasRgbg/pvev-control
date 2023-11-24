@@ -3,6 +3,7 @@
 # Version history
 # V1 Baseline
 # V2 fix consideration of min/max charging values
+# V3 use logging library 
  
 from influxdb_cli2.influxdb_cli2 import influxdb_cli2
 from go_e_charger.go_e_charger_httpv2 import GoeCharger
@@ -15,6 +16,7 @@ import paho.mqtt.client as paho
 import time
 import datetime
 import sys
+import logging
 import statistics
 
 go_e_charger = GoeCharger(ipaddr=go_e_charger_ip)
@@ -24,7 +26,7 @@ influxdb_table = go_e_table
 gen24 = Symo(ipaddr=symo_ip[0])
 
 if gen24 is None:
-    print("Gen24 don't like to talk to us")
+    logging.warning("Gen24 don't like to talk to us")
     sys.exit(1)
 
 def get_current_price():
@@ -49,7 +51,7 @@ class evcontrol:
         
         oldmode = self.get_setting_from_db('mode')
         if oldmode:
-            print("Reuse last mode from DB")
+            logging.info("Reuse last mode from DB")
             self.change_mode(oldmode)
             self.max_charge_power = 8000
             val = self.get_setting_from_db('max_charge_power')
@@ -62,7 +64,7 @@ class evcontrol:
                 self.min_charge_power = val
 
         else:
-            print("Use default mode")
+            logging.info("Use default mode")
             self.change_mode(1)
 
         # self.opmode = self.state_max_auto_charging
@@ -83,17 +85,17 @@ class evcontrol:
     def load_setup_from_db(self, name, target):
         value = self.get_setting_from_db(name)
         if value and int(value) > 0:
-            print("got from DB: {0} = {1}".format(name, value))
+            logging.debug("got from DB: {0} = {1}".format(name, value))
             return value
         else:
-            print("could not get {0} from DB, do not change".format(name))
+            logging.debug("could not get {0} from DB, do not change".format(name))
 
     def write_value_to_db(self, name, value, force = False):
-        print("Write Value {0} = {1} to DB".format(name, value))
+        #logging.debug("Write Value {0} = {1} to DB".format(name, value))
         self.influxdb.write_sensordata('ev_golf', name, value, timestamp=None, force=force)
 
     def change_mode(self, newmode):
-        print("set new state: {0}".format(newmode))
+        logging.debug("set new state: {0}".format(newmode))
         if newmode == 1:
             self.opmode = self.state_max_auto_charging
             self.max_charge_power = 8000
@@ -127,14 +129,14 @@ class evcontrol:
 
         if self.house_battery_soc < 40:
             self.power_available.append(0.0)
-            print("-> House battery lower than 40%, don't do anything")
+            logging.info("-> House battery lower than 40%, don't do anything")
             self.debugstate = 2
             
 
         elif self.power_generated > 4*230.0:
             if self.power_generated > self.power_consumption - self.power_to_ev:
                 power_now_available = (self.power_generated - (self.power_consumption - self.power_to_ev))
-                print("-> PV-Generating at least more than 4*230.0W: {0}".format(power_now_available))
+                logging.info("-> PV-Generating at least more than 4*230.0W: {0}".format(power_now_available))
                 if power_now_available <= self.min_charge_power:
                     power_now_available = self.min_charge_power
                 if power_now_available >= self.max_charge_power:
@@ -142,11 +144,11 @@ class evcontrol:
                 self.power_available.append(power_now_available)
                 self.debugstate = 5
             else:
-                print("-> PV-Generating at least more than 4*230.0W, but house takes it already")
+                logging.info("-> PV-Generating at least more than 4*230.0W, but house takes it already")
                 self.power_available.append(self.min_charge_power)
                 self.debugstate = 6
         else:
-            print("Less than 4*230.0W generated")
+            logging.info("Less than 4*230.0W generated")
             self.power_available.append(self.min_charge_power)
             self.debugstate = 7
 
@@ -159,26 +161,26 @@ class evcontrol:
                 
         if self.house_battery_soc < 50:
             self.power_available.append(0.0)
-            print("-> House battery lower than 50%, don't do anything")
+            logging.info("-> House battery lower than 50%, don't do anything")
             self.debugstate = 12
 
         elif self.power_to_grid < -100.0:
             self.power_available.append(0.0)
-            print("-> Getting significant power from Grid, no excess power available for EV")
+            logging.info("-> Getting significant power from Grid, no excess power available for EV")
             self.debugstate = 13
 
         elif self.power_generated > 5500.0:
             if (self.power_generated-5500) > (self.power_consumption - self.power_to_ev):
                 self.power_available.append((self.power_generated-5500) - (self.power_consumption - self.power_to_ev))
-                print("-> PV-Generating at least more than 5500W, taking out 150W for the rest of the house")
+                logging.info("-> PV-Generating at least more than 5500W, taking out 150W for the rest of the house")
                 self.debugstate = 15
             else:
                 self.power_available.append(0.0)
-                print("-> PV-Generating at least more than 5500W, but house takes it already")
+                logging.info("-> PV-Generating at least more than 5500W, but house takes it already")
                 self.debugstate = 16
         else:
             self.power_available.append(0.0)
-            print("Less than 2000W generated")
+            logging.info("Less than 2000W generated")
             self.debugstate = 17
 
         self.do_switching(6*230.0)
@@ -192,7 +194,7 @@ class evcontrol:
         else:
             self.disconnectcounter += 1
         
-        print("disconnectcounter {0}".format(self.disconnectcounter))
+        logging.info("disconnectcounter {0}".format(self.disconnectcounter))
         if self.disconnectcounter > 15:
             self.disconnectcounter = 0
             self.change_mode(22)
@@ -210,7 +212,7 @@ class evcontrol:
         else:
             self.disconnectcounter += 1
         
-        print("disconnectcounter {0}".format(self.disconnectcounter))
+        logging.info("disconnectcounter {0}".format(self.disconnectcounter))
         if self.disconnectcounter > 15:
             self.disconnectcounter = 0
             self.change_mode(22)
@@ -233,18 +235,18 @@ class evcontrol:
         
         current_price = get_current_price()        
  
-        print("------------------------------------------")
+        logging.info("------------------------------------------")
         if current_price <= self.charge_below_price:
-            print("current price: {0} - charge_below_price {1} - switch on ".format(current_price, self.charge_below_price))
+            logging.info("current price: {0} - charge_below_price {1} - switch on ".format(current_price, self.charge_below_price))
             self.debugstate = 25
             self.power_available = [self.max_charge_power]
             self.do_switching(1, force=True)
         else:
-            print("current price: {0} - charge_below_price {1} - switch off ".format(current_price, self.charge_below_price))
+            logging.info("current price: {0} - charge_below_price {1} - switch off ".format(current_price, self.charge_below_price))
             self.debugstate = 26
             self.power_available = [0.0]
             self.do_switching(100000, force=True)
-        print("------------------------------------------")
+        logging.info("------------------------------------------")
 
         self.update_values_after()
     
@@ -256,7 +258,7 @@ class evcontrol:
         self.power_to_ev = self.go_e_charger.P_All
         self.house_battery_soc = self.gen24.read_data("Battery_SoC")
         
-        print("pwr_gen: {0}, pwr_grid: {1}, pwr_consum: {2}, pwr_ev: {3}".format(self.power_generated, self.power_to_grid, self.power_consumption, self.power_to_ev))
+        logging.info("pwr_gen: {0}, pwr_grid: {1}, pwr_consum: {2}, pwr_ev: {3}".format(self.power_generated, self.power_to_grid, self.power_consumption, self.power_to_ev))
 
         self.write_value_to_db('power_to_ev', self.power_to_ev)
         self.write_value_to_db('charge_below_price', self.charge_below_price)
@@ -291,13 +293,13 @@ class evcontrol:
         if len(self.power_available) == 0:
             self.power_available = [0.0]
 
-        print("Values in buffer")
-        print(self.power_available)
-        print("Average Power Available: {0} W, need {1} W".format(statistics.fmean(self.power_available),p_needed))
+        logging.info("Values in buffer {0}".format(self.power_available))
+        #print(self.power_available)
+        logging.info("Average Power Available: {0} W, need {1} W".format(statistics.fmean(self.power_available),p_needed))
         
         p_avail = statistics.fmean(self.power_available)
         if  p_avail >= p_needed:
-            print("Switch on")
+            logging.info("Switch on")
             value = statistics.fmean(self.power_available)
             if self.go_e_charger.CableLocked() == True:
                 self.go_e_charger.setChargingP(value)
@@ -310,13 +312,13 @@ class evcontrol:
             
         else: 
             self.needtoswitchcounter += 1
-            print("Tendency to Switch off, counter {0}".format(self.needtoswitchcounter))
+            logging.info("Tendency to Switch off, counter {0}".format(self.needtoswitchcounter))
 
             
-            if self.needtoswitchcounter >= 20 or force == True:
+            if self.needtoswitchcounter >= 8 or force == True:
                 self.needtoswitchcounter = 0
                 
-                print("Really Switch off")
+                logging.info("Really Switch off")
                 self.write_value_to_db('ev_switch_state', 0 )
                 self.go_e_charger.ForceOn = 0
 
@@ -328,7 +330,7 @@ class evcontrol:
 golfonso = evcontrol(go_e_charger, gen24, influxdb2)
 
 def on_connect(client, userdata, flags, rc):
-    print("Connection returned result: " + str(rc))
+    logging.debug("MQTT Connection returned result: " + str(rc))
     client.subscribe("pentling/ev_golf/change_mode", 1)
     client.subscribe("pentling/ev_golf/max_charge_power", 1)
     client.subscribe("pentling/ev_golf/min_charge_power", 1)
@@ -339,21 +341,21 @@ def on_message(client, userdata, msg):
     # print(msg.topic+": {0}".format(int(msg.payload)) )
     if msg.topic == "pentling/ev_golf/change_mode":
         if int(msg.payload) >= 0 and int(msg.payload) <= 99:
-            print("MQTT Change state {0}".format(msg.payload))
+            logging.info("MQTT Change state {0}".format(msg.payload))
             golfonso.change_mode(int(msg.payload))
     elif msg.topic == "pentling/ev_golf/max_charge_power":
         if int(msg.payload) >= 0 and int(msg.payload) <= 8000:
-            print("MQTT max charge power {0}".format(msg.payload))
+            logging.info("MQTT max charge power {0}".format(msg.payload))
             golfonso.max_charge_power = int(msg.payload)
             golfonso.write_value_to_db('max_charge_power', golfonso.max_charge_power, force=True)
     elif msg.topic == "pentling/ev_golf/min_charge_power":
         if int(msg.payload) >= 0 and int(msg.payload) <= 8000:
-            print("MQTT min charge power {0}".format(msg.payload))
+            logging.info("MQTT min charge power {0}".format(msg.payload))
             golfonso.min_charge_power = int(msg.payload)
             golfonso.write_value_to_db('min_charge_power', golfonso.min_charge_power, force=True)
     elif msg.topic == "pentling/ev_golf/charge_below_price":
         if float(msg.payload) >= 0.0 and float(msg.payload) <= 2.0:
-            print("MQTT charge_below_price {0}".format(msg.payload))
+            logging.info("MQTT charge_below_price {0}".format(msg.payload))
             golfonso.charge_below_price = float(msg.payload)
             golfonso.write_value_to_db('charge_below_price', golfonso.charge_below_price, force=True)
 
@@ -363,6 +365,7 @@ mqtt.on_message = on_message
 mqtt.connect(mqtt_ip, mqtt_port)
 mqtt.loop_start()
 
+logging.basicConfig(format='go_e_charger_control: %(message)s', level=logging.DEBUG)
 
 while True:
     
