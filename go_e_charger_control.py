@@ -19,6 +19,8 @@ import sys
 import logging
 import statistics
 
+logging.basicConfig(format='go_e_charger_control: %(message)s', level=logging.DEBUG)
+
 go_e_charger = GoeCharger(ipaddr=go_e_charger_ip)
 influxdb2 = influxdb_cli2(influxdb_url, influxdb_token, influxdb_org, influxdb_bucket)
 influxdb_table = go_e_table   
@@ -365,7 +367,8 @@ mqtt.on_message = on_message
 mqtt.connect(mqtt_ip, mqtt_port)
 mqtt.loop_start()
 
-logging.basicConfig(format='go_e_charger_control: %(message)s', level=logging.DEBUG)
+
+
 
 while True:
     
