@@ -2,6 +2,7 @@
 
 # Version history:
 # V1: Baseline
+# V2: Add Enable function, argparse for testprogram
 
 # References:
 # https://stoborblog.wordpress.com/2017/03/11/sunspec-solar-viewer-fronius-modbus/
@@ -52,6 +53,8 @@ class Symo:
             "Nameplate_Battery_Capacity" : [[40151,40152], "uint16_sunssf", 1],
             "Nameplate_Battery_Charge_Power" : [[40155,40156], "uint16_sunssf", 1],
             "Nameplate_Battery_Discharge_Power" : [[40157,40158], "uint16_sunssf", 1],
+        # control model
+            "Control_conn" : [40242, "uint16", 1],
         # Status model
             "Isolation_resistance" : [[40236,40237], "uint16_sunssf", 1],
         # Storage device (Battery)
@@ -128,6 +131,8 @@ class Symo:
             "Operating_State" : [40118, "uint16", 1],
         # Nameplate model
             "Nameplate_Continous_AC_Power" : [[40135,40136], "uint16_sunssf", 1],
+        # control model
+            "Control_conn" : [40242, "uint16", 1],
         # Multiple MPPT
             "Sunspec_MPPT_ID" : [40264, "uint16", 1],
             "MPPT_1_DC_Current" : [[40283,40266], "uint16_sunssf", 1],
@@ -162,7 +167,9 @@ class Symo:
 
         if self.model == "autodetect":
             self.name = self.read_string(40021, 16)
-            if "GEN24" in self.name:
+            if self.name == None:
+                print("Error, could not identify Fronius device")
+            elif "GEN24" in self.name:
                 self.registers = registers_gen24
                 self.calculated_parameters = calculated_parameters_gen24
             else:
@@ -446,6 +453,12 @@ class Symo:
             self.write_data('Battery_StorCtl_Mod',reg)
             self.write_data('Battery_OutWRte', power)
 
+    def enable(self, val):
+        if val == True:
+            symo.write_uint16(40242,1)
+        else:
+            symo.write_uint16(40242,0)
+
     # Does not really work?
     def trigger_isolation_measurement(self):
         print("Trigger isolation measurement")
@@ -463,56 +476,75 @@ class Symo:
     
 # Test area
 if __name__ == "__main__":
-    
-    symo = Symo(ipaddr='192.168.0.123')
-    
-    # Current AC Output Power
-    # print(symo.read_float(40092))
-    
-    print(symo.read_data("Sunspec_Common_ID"))
+    import argparse
+    argparser = argparse.ArgumentParser()
+    argparser.add_argument("-a", "--address", help="IP address Fronius Symo", 
+                           default='192.168.0.123', action='store')
 
-#    print(symo.read_uint32(40286))
+    argparser.add_argument("--debug", help="Enable debug output",
+                           action='store_true')    
 
-#    symo.set_battery_charge_rate(None)
-#    symo.set_battery_charge_rate(None)
-#    symo.set_battery_discharge_rate(None)
-#    symo.write_uint16(40366,400)
-#    symo.write_uint16(40358,3)
-
-    #symo.trigger_isolation_measurement()
-
-#    Isolationsmessung triggern ? 
-#    symo.write_uint16(40230,300)
-#    symo.write_uint16(40242,0)
-#    time.sleep(90)
-#    symo.write_uint16(40242,1)
-
-#    print(symo.read_uint16(40359))
-    
-    #print(symo.get_all_parameters())
+    argparser.add_argument("--dump", help="Dump all registers",
+                           action='store_true')    
         
-    symo.print_all()
-    
-    # print(symo.read_calculated_value('Consumption_Sum'))
-    
-    symo.print_all_calculated()
-    
-    # symo.modbus.unit_id = 200
-    # symo.print_raw()
+    argparser.add_argument("-t", "--test", help="Enable Test functions",
+                           action='store_true')
 
-    # print(symo.read_uint16(40069))
+    args = argparser.parse_args()
+    
+    symo = Symo(ipaddr=args.address)
+    
+    if args.dump:
+        symo.print_all()
+        symo.print_all_calculated()
 
-    # print(symo.modbus.unit_id)
+    if args.test:
+        print("Test results")
         
-    # symo.modbus._unit_id = 200
-    # print(symo.modbus.unit_id)
+        # Current AC Output Power
+        # print(symo.read_float(40092))
+        
+        print(symo.read_data("Sunspec_Common_ID"))
 
-    #print(symo.read_uint16(40100))
-    #print(symo.read_uint16(40102))
-    #print(symo.read_uint16(40104))
-    # print(symo.read_float(40098))
-    
-    # print(symo.get_mppt_power())
-    
-    # symo.modbus.unit_id(1)
+    #    print(symo.read_uint32(40286))
 
+    #    symo.set_battery_charge_rate(None)
+    #    symo.set_battery_charge_rate(None)
+    #    symo.set_battery_discharge_rate(None)
+    #    symo.write_uint16(40366,400)
+    #    symo.write_uint16(40358,3)
+
+        #symo.trigger_isolation_measurement()
+
+    #    Isolationsmessung triggern ? 
+    #    symo.write_uint16(40230,300)
+    #    symo.write_uint16(40242,0)
+    #    time.sleep(90)
+    #    symo.write_uint16(40242,1)
+
+    #    print(symo.read_uint16(40359))
+        
+        #print(symo.get_all_parameters())
+
+        # print(symo.read_calculated_value('Consumption_Sum'))
+                
+        # symo.modbus.unit_id = 200
+        # symo.print_raw()
+
+        # print(symo.read_uint16(40069))
+
+        # print(symo.modbus.unit_id)
+            
+        # symo.modbus._unit_id = 200
+        # print(symo.modbus.unit_id)
+
+        #print(symo.read_uint16(40100))
+        #print(symo.read_uint16(40102))
+        #print(symo.read_uint16(40104))
+        # print(symo.read_float(40098))
+        
+        # print(symo.get_mppt_power())
+        
+        # symo.modbus.unit_id(1)
+
+        symo.enable(1)
