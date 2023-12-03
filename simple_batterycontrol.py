@@ -72,6 +72,11 @@ class battery:
             self.override = False
             self.state_change = True
             print("Set State very low price on grid")
+        elif int(state) == 7:
+            self.operate = self.battery_empty
+            self.override = False
+            self.state_change = True
+            print("Set State Battery empty")
         else:
             print("unknown state, nothing changed")
 
@@ -95,8 +100,8 @@ class battery:
             self.operate = self.low_price
             self.state_change = True
         elif battery_soc < 15 and not self.override:
-            print("Set state to Charge Only")
-            self.operate = self.charge_only
+            print("Set state to battery_empty")
+            self.operate = self.battery_empty
             self.state_change = True
         else:
             print("Keep state Normal Operation")
@@ -185,8 +190,8 @@ class battery:
             self.operate = self.normal_operation
             self.state_change = True
         elif battery_soc < 15:
-            print("Set state to Charge Only")
-            self.operate = self.charge_only
+            print("Set state to battery_empty")
+            self.operate = self.battery_empty
             self.state_change = True
         else:
             print("Keep state Low Price")
@@ -211,6 +216,38 @@ class battery:
         else:
             print("Keep state Very Low Price")
             self.state_change = False
+
+    def battery_empty(self):
+        self.state = 7
+        if self.state_change:
+            print("Battery empty: Setting Charge unlim, Discharge 0")
+            gen24.set_battery_discharge_rate(0)
+            gen24.set_battery_charge_rate(None)
+            self.state_change = False
+
+        battery_soc = gen24.read_data("Battery_SoC")
+        print("Battery SOC {0}%".format(battery_soc))
+        print("Current Price {0}, Lim Price Discharge {1}, Lim Price Charge {2}".format(self.cur_price, self.price_lim_discharge, self.price_lim_charge))
+        
+        # Switch off inverter, if there is no input and battery empty
+        if gen24.read_data("MPPT_1_DC_Voltage") < 20 and gen24.read_data("MPPT_2_DC_Voltage") < 20:
+            gen24.enable(0)
+
+        elif gen24.read_data("MPPT_1_DC_Voltage") > 50 and gen24.read_data("MPPT_2_DC_Voltage") < 50:
+            gen24.enable(1)
+ 
+        if self.cur_price < self.price_lim_charge and not self.override:
+            print("Set state to Very low price")
+            self.operate = self.very_low_price
+            self.state_change = True
+            gen24.enable(1)
+        elif (battery_soc > 25 and self.cur_price > self.price_lim_discharge) and not self.override:
+            print("Set state to Normal Operation")
+            self.operate = self.normal_operation
+            self.state_change = True
+            gen24.enable(1)
+        else:
+            print("Keep state Charge Only")
 
 
 bat = battery(gen24)
