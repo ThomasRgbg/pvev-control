@@ -455,9 +455,9 @@ class Symo:
 
     def enable(self, val):
         if val == True:
-            symo.write_uint16(40242,1)
+            self.write_uint16(40242,1)
         else:
-            symo.write_uint16(40242,0)
+            self.write_uint16(40242,0)
 
     # Does not really work?
     def trigger_isolation_measurement(self):
