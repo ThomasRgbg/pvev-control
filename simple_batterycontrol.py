@@ -231,9 +231,11 @@ class battery:
         
         # Switch off inverter, if there is no input and battery empty
         if gen24.read_data("MPPT_1_DC_Voltage") < 20 and gen24.read_data("MPPT_2_DC_Voltage") < 20:
+            print("Low voltage on Gen24, switch off")
             gen24.enable(0)
 
-        elif gen24.read_data("MPPT_1_DC_Voltage") > 50 and gen24.read_data("MPPT_2_DC_Voltage") < 50:
+        elif gen24.read_data("MPPT_1_DC_Voltage") > 50 or gen24.read_data("MPPT_2_DC_Voltage") > 50:
+            print("minimal voltage on Gen24 reached, switch on")
             gen24.enable(1)
  
         if self.cur_price < self.price_lim_charge and not self.override:
