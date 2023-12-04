@@ -230,11 +230,11 @@ class battery:
         print("Current Price {0}, Lim Price Discharge {1}, Lim Price Charge {2}".format(self.cur_price, self.price_lim_discharge, self.price_lim_charge))
         
         # Switch off inverter, if there is no input and battery empty
-        if gen24.read_data("MPPT_1_DC_Voltage") < 20 and gen24.read_data("MPPT_2_DC_Voltage") < 20:
+        if gen24.read_data("MPPT_1_DC_Voltage") < 50 and gen24.read_data("MPPT_2_DC_Voltage") < 50:
             print("Low voltage on Gen24, switch off")
             gen24.enable(0)
 
-        elif gen24.read_data("MPPT_1_DC_Voltage") > 50 or gen24.read_data("MPPT_2_DC_Voltage") > 50:
+        elif gen24.read_data("MPPT_1_DC_Voltage") > 70 or gen24.read_data("MPPT_2_DC_Voltage") > 70:
             print("minimal voltage on Gen24 reached, switch on")
             gen24.enable(1)
  
