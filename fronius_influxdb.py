@@ -41,7 +41,6 @@ if __name__ == "__main__":
     print("Using IP {0}, Database Table {1}".format(ipaddr, influxdb_table))
 
     influxdb = influxdb_cli2(influxdb_url, influxdb_token, org=influxdb_org, bucket=influxdb_bucket)
-    influxdb_table = 'pv_fronius'
 
     symo = Symo(ipaddr)
     print("Found Inverter {0}".format(symo.name))
