@@ -453,11 +453,21 @@ class Symo:
             self.write_data('Battery_StorCtl_Mod',reg)
             self.write_data('Battery_OutWRte', power)
 
-    def enable(self, val):
-        if val == True:
-            self.write_uint16(40242,1)
+    #
+    def enable(self, enable=True, auto=False):
+        if auto==True:
+            if self.read_data("MPPT_1_DC_Voltage") < 50 and self.read_data("MPPT_2_DC_Voltage") < 50:
+                print("Low voltage on Gen24, switch off")
+                self.write_data("Control_conn",0)
+
+            elif self.read_data("MPPT_1_DC_Voltage") > 70 or self.read_data("MPPT_2_DC_Voltage") > 70:
+                print("minimal voltage on Gen24 reached, switch on")
+                self.write_data("Control_conn",1)
         else:
-            self.write_uint16(40242,0)
+            if enable == True:
+                self.write_data("Control_conn",1)
+            else:
+                self.write_data("Control_conn",0)
 
     # Does not really work?
     def trigger_isolation_measurement(self):
