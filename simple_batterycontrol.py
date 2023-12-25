@@ -52,11 +52,11 @@ class battery:
             self.override = True
             self.state_change = True
             print("Set State to Charge Only (forced)")
-        elif int(state) == 3:
-            self.operate = self.slow_charge
-            self.override = False
-            self.state_change = True
-            print("Set State to Slow Charge (until 25%)")
+        #elif int(state) == 3:
+            #self.operate = self.slow_charge
+            #self.override = False
+            #self.state_change = True
+            #print("Set State to Slow Charge (until 25%)")
         elif int(state) == 4:
             self.operate = self.gen24opt_charge
             self.override = False
@@ -91,6 +91,8 @@ class battery:
             gen24.set_battery_charge_rate(None)
             self.state_change = False
 
+        gen24.enable(auto=False, enable=True)
+
         battery_soc = gen24.read_data("Battery_SoC")
         print("Battery SOC {0}%".format(battery_soc))
         print("Current Price {0}, Lim Price Discharge {1}, Lim Price Charge {2}".format(self.cur_price, self.price_lim_discharge, self.price_lim_charge))
@@ -115,6 +117,8 @@ class battery:
             gen24.set_battery_charge_rate(None)
             self.state_change = False
 
+        gen24.enable(auto=False, enable=True)
+
         battery_soc = gen24.read_data("Battery_SoC")
         print("Battery SOC {0}%".format(battery_soc))
         print("Current Price {0}, Lim Price Discharge {1}, Lim Price Charge {2}".format(self.cur_price, self.price_lim_discharge, self.price_lim_charge))
@@ -131,43 +135,43 @@ class battery:
             print("Keep state Charge Only")
             self.state_change = False
 
-    def slow_charge(self):
-        self.state = 3
-        if self.state_change:
-            print("Battery: Setting Charge 1000, Discharge unlim")
-            gen24.set_battery_discharge_rate(None)
-            gen24.set_battery_charge_rate(10)
-            self.state_change = False
+    #def slow_charge(self):
+        #self.state = 3
+        #if self.state_change:
+            #print("Battery: Setting Charge 1000, Discharge unlim")
+            #gen24.set_battery_discharge_rate(None)
+            #gen24.set_battery_charge_rate(10)
+            #self.state_change = False
 
-        battery_soc = gen24.read_data("Battery_SoC")
-        print("Battery SOC {0}%".format(battery_soc))
+        #battery_soc = gen24.read_data("Battery_SoC")
+        #print("Battery SOC {0}%".format(battery_soc))
         
-        if battery_soc < 25 and not self.override:
-            print("Set state to Normal Operation")
-            self.operate = self.normal_operation
-            self.state_change = True
-        else:
-            print("Keep state Slow Charge")
-            self.state_change = False
+        #if battery_soc < 25 and not self.override:
+            #print("Set state to Normal Operation")
+            #self.operate = self.normal_operation
+            #self.state_change = True
+        #else:
+            #print("Keep state Slow Charge")
+            #self.state_change = False
 
-    def gen24opt_charge(self):
-        self.state = 4
-        if self.state_change:
-            print("Battery: Setting Charge 1000, Discharge unlim")
-            gen24.set_battery_discharge_rate(None)
-            gen24.set_battery_charge_rate(10)
-            self.state_change = False
+    #def gen24opt_charge(self):
+        #self.state = 4
+        #if self.state_change:
+            #print("Battery: Setting Charge 1000, Discharge unlim")
+            #gen24.set_battery_discharge_rate(None)
+            #gen24.set_battery_charge_rate(10)
+            #self.state_change = False
 
-        battery_soc = gen24.read_data("Battery_SoC")
-        print("Battery SOC {0}%".format(battery_soc))
+        #battery_soc = gen24.read_data("Battery_SoC")
+        #print("Battery SOC {0}%".format(battery_soc))
         
-        if battery_soc < 25 and not self.override:
-            print("Set state to Normal Operation")
-            self.operate = self.normal_operation
-            self.state_change = True
-        else:
-            print("Keep state Slow Charge")
-            self.state_change = False
+        #if battery_soc < 25 and not self.override:
+            #print("Set state to Normal Operation")
+            #self.operate = self.normal_operation
+            #self.state_change = True
+        #else:
+            #print("Keep state Slow Charge")
+            #self.state_change = False
 
     def low_price(self):
         self.state = 5
@@ -176,6 +180,8 @@ class battery:
             gen24.set_battery_discharge_rate(0)
             gen24.set_battery_charge_rate(None)
             self.state_change = False
+
+        gen24.enable(auto=True)
 
         battery_soc = gen24.read_data("Battery_SoC")
         print("Battery SOC {0}%".format(battery_soc))
@@ -205,6 +211,8 @@ class battery:
             gen24.set_battery_charge_rate(None)
             self.state_change = False
 
+        gen24.enable(auto=True)
+
         battery_soc = gen24.read_data("Battery_SoC")
         print("Battery SOC {0}%".format(battery_soc))
         print("Current Price {0}, Lim Price Discharge {1}, Lim Price Charge {2}".format(self.cur_price, self.price_lim_discharge, self.price_lim_charge))
@@ -225,32 +233,22 @@ class battery:
             gen24.set_battery_charge_rate(None)
             self.state_change = False
 
+        gen24.enable(auto=True)
+
         battery_soc = gen24.read_data("Battery_SoC")
         print("Battery SOC {0}%".format(battery_soc))
         print("Current Price {0}, Lim Price Discharge {1}, Lim Price Charge {2}".format(self.cur_price, self.price_lim_discharge, self.price_lim_charge))
-        
-        # Switch off inverter, if there is no input and battery empty
-        if gen24.read_data("MPPT_1_DC_Voltage") < 50 and gen24.read_data("MPPT_2_DC_Voltage") < 50:
-            print("Low voltage on Gen24, switch off")
-            gen24.enable(0)
 
-        elif gen24.read_data("MPPT_1_DC_Voltage") > 70 or gen24.read_data("MPPT_2_DC_Voltage") > 70:
-            print("minimal voltage on Gen24 reached, switch on")
-            gen24.enable(1)
- 
         if self.cur_price < self.price_lim_charge and not self.override:
             print("Set state to Very low price")
             self.operate = self.very_low_price
             self.state_change = True
-            gen24.enable(1)
         elif (battery_soc > 25 and self.cur_price > self.price_lim_discharge) and not self.override:
             print("Set state to Normal Operation")
             self.operate = self.normal_operation
             self.state_change = True
-            gen24.enable(1)
         else:
             print("Keep state Charge Only")
-
 
 bat = battery(gen24)
 
@@ -329,8 +327,8 @@ while True:
     influxdb.write_sensordata(influxdb_table, 'battery_price_lim_charge', bat.price_lim_charge)
 
     print("--------")
-    for i in range(int(30)):
-        time.sleep(10)
+    for i in range(int(60)):
+        time.sleep(5)
         #print(i)
         if bat.state_change == True:
             print("break")
