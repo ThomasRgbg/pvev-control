@@ -91,6 +91,7 @@ class battery:
             gen24.set_battery_charge_rate(None)
             self.state_change = False
 
+        # Enable
         gen24.enable(auto=False, enable=True)
 
         battery_soc = gen24.read_data("Battery_SoC")
@@ -117,7 +118,8 @@ class battery:
             gen24.set_battery_charge_rate(None)
             self.state_change = False
 
-        gen24.enable(auto=False, enable=True)
+        # Disable, if no voltage on PV (and battery should be used)
+        gen24.enable(auto=True)
 
         battery_soc = gen24.read_data("Battery_SoC")
         print("Battery SOC {0}%".format(battery_soc))
@@ -181,6 +183,7 @@ class battery:
             gen24.set_battery_charge_rate(None)
             self.state_change = False
 
+        # Disable, if no voltage on PV (and battery should be used)
         gen24.enable(auto=True)
 
         battery_soc = gen24.read_data("Battery_SoC")
@@ -211,7 +214,8 @@ class battery:
             gen24.set_battery_charge_rate(None)
             self.state_change = False
 
-        gen24.enable(auto=True)
+        # Enable, since battery should be charged
+        gen24.enable(auto=False, enable=True)
 
         battery_soc = gen24.read_data("Battery_SoC")
         print("Battery SOC {0}%".format(battery_soc))
@@ -233,6 +237,7 @@ class battery:
             gen24.set_battery_charge_rate(None)
             self.state_change = False
 
+        # Disable if no Voltage on PV (and battery is anyway empty)
         gen24.enable(auto=True)
 
         battery_soc = gen24.read_data("Battery_SoC")
