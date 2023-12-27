@@ -85,14 +85,19 @@ class battery:
 
     def normal_operation(self):
         self.state = 1
+
+        # Enable
+        gen24.enable(auto=False, enable=True)
+
         if self.state_change:
+            # Wait after enable for startup
+            time.sleep(30)
+            
             print("Battery: Setting Charge unlim, Discharge unlim")
             gen24.set_battery_discharge_rate(None)
             gen24.set_battery_charge_rate(None)
             self.state_change = False
 
-        # Enable
-        gen24.enable(auto=False, enable=True)
 
         battery_soc = gen24.read_data("Battery_SoC")
         print("Battery SOC {0}%".format(battery_soc))
@@ -208,14 +213,18 @@ class battery:
 
     def very_low_price(self):
         self.state = 6
+        
+        # Enable, since battery should be charged
+        gen24.enable(auto=False, enable=True)
+
         if self.state_change:
+            # Wait for startup after enable
+            time.sleep(30)
             print("Battery: Setting Charge unlim, Discharge -5kW (=Charge Battery")
             gen24.set_battery_discharge_rate(-50)
             gen24.set_battery_charge_rate(None)
             self.state_change = False
 
-        # Enable, since battery should be charged
-        gen24.enable(auto=False, enable=True)
 
         battery_soc = gen24.read_data("Battery_SoC")
         print("Battery SOC {0}%".format(battery_soc))
