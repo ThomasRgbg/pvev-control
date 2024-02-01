@@ -40,7 +40,7 @@ class GoeCharger:
     def __ReadStatusAPI(self, params = 'all'):
         try:
             if 'all' == params:
-                statusRequest = requests.get("http://%s/api/status" % self.ipaddr, timeout=5,5)
+                statusRequest = requests.get("http://%s/api/status" % self.ipaddr, timeout=(5,5))
             else:
                 # TODO: Does not really work
                 # print("http://{0}/api/status?filter={1}".format( self.ipaddr, params))
@@ -53,7 +53,7 @@ class GoeCharger:
             return {}
 
     def __WriteStatusAPI(self, parameter, value):
-        setRequest = requests.get("http://%s/api/set?%s=%s" % (self.ipaddr, parameter, value), timeout=5,5)
+        setRequest = requests.get("http://%s/api/set?%s=%s" % (self.ipaddr, parameter, value), timeout=(5,5))
         #return GoeChargerStatusMapper().mapApiStatusResponse(setRequest.json())
         
     def convert_incomming_dict(self, data, raw = False):
