@@ -18,8 +18,9 @@ import time
 
 class GoeCharger:
     
-    def __init__(self, ipaddr = '192.168.0.82'):
+    def __init__(self, ipaddr = '192.168.0.82', debug=False):
         self.ipaddr = ipaddr
+        self.debug = debug
         self.parameters = {
             # Format:
             # 'code' : ['Name', convertread, convertwrite]
@@ -39,7 +40,7 @@ class GoeCharger:
     def __ReadStatusAPI(self, params = 'all'):
         try:
             if 'all' == params:
-                statusRequest = requests.get("http://%s/api/status" % self.ipaddr, timeout=5)
+                statusRequest = requests.get("http://%s/api/status" % self.ipaddr, timeout=5,5)
             else:
                 # TODO: Does not really work
                 # print("http://{0}/api/status?filter={1}".format( self.ipaddr, params))
@@ -52,7 +53,7 @@ class GoeCharger:
             return {}
 
     def __WriteStatusAPI(self, parameter, value):
-        setRequest = requests.get("http://%s/api/set?%s=%s" % (self.ipaddr, parameter, value))
+        setRequest = requests.get("http://%s/api/set?%s=%s" % (self.ipaddr, parameter, value), timeout=5,5)
         #return GoeChargerStatusMapper().mapApiStatusResponse(setRequest.json())
         
     def convert_incomming_dict(self, data, raw = False):
