@@ -58,10 +58,10 @@ class battery:
             #self.state_change = True
             #print("Set State to Slow Charge (until 25%)")
         elif int(state) == 4:
-            self.operate = self.gen24opt_charge
+            self.operate = self.summer_mode
             self.override = False
             self.state_change = True
-            print("Set State to optimized Engergy balance")
+            print("Set State to optimized for lot of sun")
         elif int(state) == 5:
             self.operate = self.low_price
             self.override = False
@@ -161,24 +161,29 @@ class battery:
             #print("Keep state Slow Charge")
             #self.state_change = False
 
-    #def gen24opt_charge(self):
-        #self.state = 4
-        #if self.state_change:
-            #print("Battery: Setting Charge 1000, Discharge unlim")
-            #gen24.set_battery_discharge_rate(None)
-            #gen24.set_battery_charge_rate(10)
-            #self.state_change = False
+    def summer_mode(self):
+        self.state = 4
+        if self.state_change:
+            print("Battery: Setting Charge 0, Discharge unlim")
+            gen24.set_battery_discharge_rate(None)
+            gen24.set_battery_charge_rate(0)
+            self.state_change = False
 
-        #battery_soc = gen24.read_data("Battery_SoC")
-        #print("Battery SOC {0}%".format(battery_soc))
+        battery_soc = gen24.read_data("Battery_SoC")
+        print("Battary SOC {0}%".format(battery_soc))
         
-        #if battery_soc < 25 and not self.override:
-            #print("Set state to Normal Operation")
-            #self.operate = self.normal_operation
-            #self.state_change = True
-        #else:
-            #print("Keep state Slow Charge")
-            #self.state_change = False
+        if battery_soc < 50 and not self.override:
+            print("Battery below 50%, Charge with full power")
+            gen24.set_battery_charge_rate(None)
+        
+        # Fallback, should no thappen
+        if battery_soc < 25 and not self.override:
+            print("Fallback... Set state to Normal Operation")
+            self.operate = self.normal_operation
+            self.state_change = True
+        else:
+            print("Keep state Slow Charge")
+            self.state_change = False
 
     def low_price(self):
         self.state = 5
