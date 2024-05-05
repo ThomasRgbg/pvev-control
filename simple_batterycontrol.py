@@ -37,7 +37,7 @@ class battery:
 
     def set_state(self, state):
         self.state = state
-        if int(state) == 0:
+        if state == None or int(state) == 0:
             self.operate = self.normal_operation
             self.override = False
             self.state_change = True
@@ -277,6 +277,14 @@ bat = battery(gen24)
 influxdb = influxdb_cli2(influxdb_url, influxdb_token, influxdb_org, influxdb_bucket)
 influxdb_table = 'pv_fronius'    
 
+def get_setting_from_db(self, name):
+    results = influxdb.query_data(influxdb_table, name, datetime.datetime.utcnow()+datetime.timedelta(hours=-8), datetime.datetime.utcnow())
+    if results:
+        return results[-1][3]
+    else:
+        return None
+
+
 def get_current_price():
     results = influxdb.query_data('grid_tibber', 'price_total', datetime.datetime.utcnow()+datetime.timedelta(hours=-1), datetime.datetime.utcnow())
     if results:
@@ -329,6 +337,10 @@ mqtt.loop_start()
 force_switch_on = False
 force_switch_off = False
 
+laststate = get_setting_from_db('battery_state')
+if laststate == None:
+    laststate = 0
+
 lim = get_last_price_lim_discharge()
 if lim:
     bat.set_price_lim_discharge(lim)
@@ -336,6 +348,8 @@ if lim:
 lim = get_last_price_lim_charge()
 if lim:
     bat.set_price_lim_charge(lim)
+
+bat.set_state(laststate)
 
 while True:
     bat.cur_price = get_current_price()
