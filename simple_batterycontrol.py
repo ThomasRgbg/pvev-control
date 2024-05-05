@@ -175,6 +175,9 @@ class battery:
         if battery_soc < 50 and not self.override:
             print("Battery below 50%, Charge with full power")
             gen24.set_battery_charge_rate(None)
+        else:
+            print("Battery only for surplus charges")
+            gen24.set_battery_charge_rate(0)
         
         # Fallback, should no thappen
         if battery_soc < 25 and not self.override:
@@ -182,7 +185,7 @@ class battery:
             self.operate = self.normal_operation
             self.state_change = True
         else:
-            print("Keep state Slow Charge")
+            print("Keep state Summer mode")
             self.state_change = False
 
     def low_price(self):
