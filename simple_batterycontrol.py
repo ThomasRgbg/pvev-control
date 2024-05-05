@@ -277,7 +277,7 @@ bat = battery(gen24)
 influxdb = influxdb_cli2(influxdb_url, influxdb_token, influxdb_org, influxdb_bucket)
 influxdb_table = 'pv_fronius'    
 
-def get_setting_from_db(self, name):
+def get_setting_from_db(name):
     results = influxdb.query_data(influxdb_table, name, datetime.datetime.utcnow()+datetime.timedelta(hours=-8), datetime.datetime.utcnow())
     if results:
         return results[-1][3]
