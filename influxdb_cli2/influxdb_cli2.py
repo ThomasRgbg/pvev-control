@@ -1,6 +1,7 @@
 # 
 # V1 Something to start with...
 # V2 Handle force parameter better
+# V3 Remove timezone information and convert to UTC... 
 #
 
 import influxdb_client
@@ -55,7 +56,9 @@ class influxdb_cli2:
     #  |> filter(fn: (r) => r._measurement == "Battery_Power" and r.location == "pv_fronius")
 
     def query_data(self, location, measurement, start_date, end_date):
+        start_date = start_date.replace(tzinfo=None)
         start_date = start_date.isoformat(sep='T', timespec='seconds')
+        end_date = end_date.replace(tzinfo=None)
         end_date = end_date.isoformat(sep='T', timespec='seconds')
         query_api = self.influxdb_client.query_api()
         query = 'from(bucket: "{0}")\
