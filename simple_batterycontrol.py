@@ -29,16 +29,19 @@ class battery:
         self.percent_price_discharge = 70   # First discharge to xx %, then stop if price is low
 
     def set_percent_price_discharge(self, percent):
-        self.percent_price_discharge = percent
-        self.state_change = True
+        if isinstance(percent, (int, float)):
+            self.percent_price_discharge = percent
+            self.state_change = True
 
     def set_price_lim_discharge(self, price):
-        self.price_lim_discharge = price
-        self.state_change = True
+        if isinstance(price, (int, float)):
+            self.price_lim_discharge = price
+            self.state_change = True
 
     def set_price_lim_charge(self, price):
-        self.price_lim_charge = price
-        self.state_change = True
+        if isinstance(price, (int, float)):
+            self.price_lim_charge = price
+            self.state_change = True
 
     def set_state(self, state):
         self.state = state
@@ -282,17 +285,16 @@ bat = battery(gen24)
 influxdb = influxdb_cli2(influxdb_url, influxdb_token, influxdb_org, influxdb_bucket)
 influxdb_table = 'pv_fronius'    
 
-def get_current_price():
-    results = influxdb.query_data('grid_tibber', 'price_total', datetime.datetime.utcnow()+datetime.timedelta(hours=-1), datetime.datetime.utcnow())
-    if results:
-        return results[0][3]
 
-def get_last_from_db(name, searchinterval=24):
-    results = influxdb.query_data('pv_fronius', name, datetime.datetime.utcnow()+datetime.timedelta(hours=(searchinterval*-1)), datetime.datetime.utcnow())
+def get_last_from_db(name, searchinterval=24, location='pv_fronius'):
+    results = influxdb.query_data(location, name, datetime.datetime.utcnow()+datetime.timedelta(hours=(searchinterval*-1)), datetime.datetime.utcnow())
     if results:
         # print(results)
         # print(results[-1][3])
         return results[-1][3]
+
+def get_current_price():
+    return get_last_from_db(name='price_total', searchinterval=1, location='grid_tibber')
 
 def on_connect(client, userdata, flags, rc):
     # print("Connection returned result: " + str(rc))
@@ -311,18 +313,15 @@ def on_message(client, userdata, msg):
     if msg.topic == "pentling/pv_fronius/battery_price_lim_discharge":
         if float(msg.payload) >= 0 and float(msg.payload) <= 30.0:
             print("MQTT: receive battery_price_lim_discharge {0}".format(msg.payload))
-            bat.price_lim_discharge = float(msg.payload)
-            bat.state_change = True
+            bat.set_price_lim_discharge(float(msg.payload))
     if msg.topic == "pentling/pv_fronius/battery_price_lim_charge":
         if float(msg.payload) >= 0 and float(msg.payload) <= 30.0:
             print("MQTT: receive battery_price_lim_charge {0}".format(msg.payload))
-            bat.price_lim_charge = float(msg.payload)
-            bat.state_change = True
+            bat.set_price_lim_charge(float(msg.payload))
     if msg.topic == "pentling/pv_fronius/battery_percent_price_discharge":
         if float(msg.payload) >= 0 and float(msg.payload) <= 100.0:
             print("MQTT: receive battery_percent_price_discharge {0}".format(msg.payload))
-            bat.percent_price_discharge = float(msg.payload)
-            bat.state_change = True
+            bat.set_percent_price_discharge(float(msg.payload))
 
 mqtt= paho.Client()
 mqtt.on_connect = on_connect
@@ -330,18 +329,10 @@ mqtt.on_message = on_message
 mqtt.connect(mqtt_ip, mqtt_port)
 mqtt.loop_start()
 
-lim = get_last_from_db('battery_percent_price_discharge', searchinterval=96)
-if lim:
-    bat.set_percent_price_discharge(lim)
-
-lim = get_last_from_db('battery_price_lim_discharge', searchinterval=96)
-if lim:
-    bat.set_price_lim_discharge(lim)
-
-lim = get_last_from_db('battery_price_lim_charge', searchinterval=96)
-if lim:
-    bat.set_price_lim_charge(lim)
-
+bat.set_percent_price_discharge(get_last_from_db('battery_percent_price_discharge', searchinterval=96))
+bat.set_price_lim_discharge(get_last_from_db('battery_price_lim_discharge', searchinterval=96))
+bat.set_price_lim_charge(get_last_from_db('battery_price_lim_charge', searchinterval=96))
+    
 laststate = get_last_from_db('battery_state', searchinterval=1)
 if laststate == None:
     laststate = 0
