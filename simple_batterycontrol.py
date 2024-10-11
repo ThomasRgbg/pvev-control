@@ -111,7 +111,7 @@ class battery:
         print("Battery SOC {0}%".format(battery_soc))
         print("Current Price {0}, Lim Price Discharge {1}, Lim Price Charge {2}".format(self.cur_price, self.price_lim_discharge, self.price_lim_charge))
         
-        if (self.cur_price < self.price_lim_discharge) and not self.override:
+        if (self.cur_price < self.price_lim_discharge) and (battery_soc < self.percent_price_discharge) and not self.override:
             print("Set state to low_price")
             self.operate = self.low_price
             self.state_change = True
@@ -216,6 +216,10 @@ class battery:
             self.operate = self.very_low_price
             self.state_change = True
         elif (battery_soc >= 15 and self.cur_price > self.price_lim_discharge) and not self.override:
+            print("Set state to Normal Operation")
+            self.operate = self.normal_operation
+            self.state_change = True
+        elif (battery_soc > self.percent_price_discharge) and not self.override:
             print("Set state to Normal Operation")
             self.operate = self.normal_operation
             self.state_change = True
