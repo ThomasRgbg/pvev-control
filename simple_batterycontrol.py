@@ -26,11 +26,11 @@ class battery:
         self.cur_price = 10
         self.price_lim_discharge = 0.06
         self.price_lim_charge = 0.01
-        self.percent_price_discharge = 70   # First discharge to xx %, then stop if price is low
+        self.soc_lim_discharge = 70   # First discharge to xx %, then stop if price is low
 
-    def set_percent_price_discharge(self, percent):
-        if isinstance(percent, (int, float)):
-            self.percent_price_discharge = percent
+    def set_soc_lim_discharge(self, soc):
+        if isinstance(soc, (int, float)):
+            self.soc_lim_discharge = soc
             self.state_change = True
 
     def set_price_lim_discharge(self, price):
@@ -108,10 +108,10 @@ class battery:
 
 
         battery_soc = gen24.read_data("Battery_SoC")
-        print("Battery SOC {0}%".format(battery_soc))
+        print("Battery SOC {0}%, Lim SOC Discharge {1}%".format(battery_soc, self.soc_lim_discharge))
         print("Current Price {0}, Lim Price Discharge {1}, Lim Price Charge {2}".format(self.cur_price, self.price_lim_discharge, self.price_lim_charge))
         
-        if (self.cur_price < self.price_lim_discharge) and (battery_soc < self.percent_price_discharge) and not self.override:
+        if (self.cur_price < self.price_lim_discharge) and (battery_soc < self.soc_lim_discharge) and not self.override:
             print("Set state to low_price")
             self.operate = self.low_price
             self.state_change = True
@@ -135,7 +135,7 @@ class battery:
         gen24.enable(auto=True)
 
         battery_soc = gen24.read_data("Battery_SoC")
-        print("Battery SOC {0}%".format(battery_soc))
+        print("Battery SOC {0}%, Lim SOC Discharge {1}%".format(battery_soc, self.soc_lim_discharge))
         print("Current Price {0}, Lim Price Discharge {1}, Lim Price Charge {2}".format(self.cur_price, self.price_lim_discharge, self.price_lim_charge))
         
         if self.cur_price < self.price_lim_charge and not self.override:
@@ -208,7 +208,7 @@ class battery:
         gen24.enable(auto=True)
 
         battery_soc = gen24.read_data("Battery_SoC")
-        print("Battery SOC {0}%".format(battery_soc))
+        print("Battery SOC {0}%, Lim SOC Discharge {1}%".format(battery_soc, self.soc_lim_discharge))
         print("Current Price {0}, Lim Price Discharge {1}, Lim Price Charge {2}".format(self.cur_price, self.price_lim_discharge, self.price_lim_charge))
         
         if self.cur_price < self.price_lim_charge and not self.override:
@@ -219,7 +219,7 @@ class battery:
             print("Set state to Normal Operation")
             self.operate = self.normal_operation
             self.state_change = True
-        elif (battery_soc > self.percent_price_discharge) and not self.override:
+        elif (battery_soc > self.soc_lim_discharge) and not self.override:
             print("Set state to Normal Operation")
             self.operate = self.normal_operation
             self.state_change = True
@@ -247,7 +247,7 @@ class battery:
 
 
         battery_soc = gen24.read_data("Battery_SoC")
-        print("Battery SOC {0}%".format(battery_soc))
+        print("Battery SOC {0}%, Lim SOC Discharge {1}%".format(battery_soc, self.soc_lim_discharge))
         print("Current Price {0}, Lim Price Discharge {1}, Lim Price Charge {2}".format(self.cur_price, self.price_lim_discharge, self.price_lim_charge))
         
         if self.cur_price > self.price_lim_charge and not self.override:
@@ -305,7 +305,7 @@ def on_connect(client, userdata, flags, rc):
     client.subscribe("pentling/pv_fronius/battery_state_set", 1)
     client.subscribe("pentling/pv_fronius/battery_price_lim_discharge", 1)
     client.subscribe("pentling/pv_fronius/battery_price_lim_charge", 1)
-    client.subscribe("pentling/pv_fronius/battery_percent_price_discharge", 1)
+    client.subscribe("pentling/pv_fronius/battery_soc_lim_discharge", 1)
 
 # The callback for when a PUBLISH message is received from the server.
 def on_message(client, userdata, msg):
@@ -322,10 +322,10 @@ def on_message(client, userdata, msg):
         if float(msg.payload) >= 0 and float(msg.payload) <= 30.0:
             print("MQTT: receive battery_price_lim_charge {0}".format(msg.payload))
             bat.set_price_lim_charge(float(msg.payload))
-    if msg.topic == "pentling/pv_fronius/battery_percent_price_discharge":
+    if msg.topic == "pentling/pv_fronius/battery_soc_lim_discharge":
         if float(msg.payload) >= 0 and float(msg.payload) <= 100.0:
-            print("MQTT: receive battery_percent_price_discharge {0}".format(msg.payload))
-            bat.set_percent_price_discharge(float(msg.payload))
+            print("MQTT: receive battery_soc_lim_discharge {0}".format(msg.payload))
+            bat.set_soc_lim_discharge(float(msg.payload))
 
 mqtt= paho.Client()
 mqtt.on_connect = on_connect
@@ -333,7 +333,7 @@ mqtt.on_message = on_message
 mqtt.connect(mqtt_ip, mqtt_port)
 mqtt.loop_start()
 
-bat.set_percent_price_discharge(get_last_from_db('battery_percent_price_discharge', searchinterval=96))
+bat.set_soc_lim_discharge(get_last_from_db('battery_soc_lim_discharge', searchinterval=96))
 bat.set_price_lim_discharge(get_last_from_db('battery_price_lim_discharge', searchinterval=96))
 bat.set_price_lim_charge(get_last_from_db('battery_price_lim_charge', searchinterval=96))
     
@@ -353,6 +353,7 @@ while True:
     influxdb.write_sensordata(influxdb_table, 'battery_state', int(bat.get_state()))
     influxdb.write_sensordata(influxdb_table, 'battery_price_lim_discharge', bat.price_lim_discharge)
     influxdb.write_sensordata(influxdb_table, 'battery_price_lim_charge', bat.price_lim_charge)
+    influxdb.write_sensordata(influxdb_table, 'battery_soc_lim_discharge', bat.soc_lim_discharge)
 
     print("--------")
     for i in range(int(60)):
