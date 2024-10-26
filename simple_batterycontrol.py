@@ -108,14 +108,14 @@ class battery:
 
 
         battery_soc = gen24.read_data("Battery_SoC")
-        print("Battery SOC {0}%, Lim SOC Discharge {1}%".format(battery_soc, self.soc_lim_discharge))
+        print("Battery SOC {0}%, Lim SOC Discharge {1}%, Override {2}".format(battery_soc, self.soc_lim_discharge, self.override))
         print("Current Price {0}, Lim Price Discharge {1}, Lim Price Charge {2}".format(self.cur_price, self.price_lim_discharge, self.price_lim_charge))
         
         if (self.cur_price < self.price_lim_discharge) and (battery_soc < self.soc_lim_discharge) and not self.override:
             print("Set state to low_price")
             self.operate = self.low_price
             self.state_change = True
-        elif battery_soc < 15 and not self.override:
+        elif battery_soc < 15.0 and not self.override:
             print("Set state to battery_empty")
             self.operate = self.battery_empty
             self.state_change = True
