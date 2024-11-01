@@ -337,11 +337,11 @@ bat.set_soc_lim_discharge(get_last_from_db('battery_soc_lim_discharge', searchin
 bat.set_price_lim_discharge(get_last_from_db('battery_price_lim_discharge', searchinterval=96))
 bat.set_price_lim_charge(get_last_from_db('battery_price_lim_charge', searchinterval=96))
     
-laststate = get_last_from_db('battery_state', searchinterval=1)
-if laststate == None:
-    laststate = 0
-
-bat.set_state(laststate)
+# laststate = get_last_from_db('battery_state', searchinterval=1)
+# if laststate == None:
+#     laststate = 0
+# 
+# bat.set_state(laststate)
 
 while True:
     bat.cur_price = get_current_price()
