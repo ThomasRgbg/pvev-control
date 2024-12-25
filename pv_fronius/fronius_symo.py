@@ -14,7 +14,8 @@ import time
 import math
 import logging
 
-logging.basicConfig(format='fronius_symo: %(message)s', level=logging.INFO)
+# Overwrites, so remove
+# logging.basicConfig(format='fronius_symo: %(message)s', level=logging.INFO)
 
 
 class Symo:
@@ -60,7 +61,7 @@ class Symo:
         # control model
             "Control_conn" : [40242, "uint16", 1],
         # Status model
-            "Isolation_resistance" : [[40236,40237], "uint16_sunssf", 1],
+            # "Isolation_resistance" : [[40236,40237], "uint16_sunssf", 1],
         # Storage device (Battery)
             "Sunspec_Battery_ID" : [40354, "uint16", 1],
             "Sunspec_Battery_L" : [40355, "uint16", 1],
