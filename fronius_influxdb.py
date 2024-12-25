@@ -3,6 +3,10 @@
 import sys
 import time
 import argparse
+import logging
+
+logging.basicConfig(format='fronius_influxdb: %(message)s', level=logging.INFO)
+
 
 from pv_fronius.fronius_symo import Symo
 from influxdb_cli2.influxdb_cli2 import influxdb_cli2
@@ -25,25 +29,25 @@ if __name__ == "__main__":
     args = argparser.parse_args()
 
     if args.config and args.address:
-        print("Can not use predefined config and setting address via commandline at some time") 
+        logging.error("Can not use predefined config and setting address via commandline at some time")
         sys.exit(1)
     elif args.config:
-        print("Using config profile {0}".format(args.config))
+        logging.info("Using config profile {0}".format(args.config))
         ipaddr = symo_ip[int(args.config)]
         influxdb_table = symo_table[int(args.config)]
     elif args.address and args.database_table:
         ipaddr = args.address
         influxdb_table = args.database_table
     else:
-        print("No or wrong parameters set")
+        logging.error("No or wrong parameters set")
         sys.exit(1)
 
-    print("Using IP {0}, Database Table {1}".format(ipaddr, influxdb_table))
+    logging.info("Using IP {0}, Database Table {1}".format(ipaddr, influxdb_table))
 
     influxdb = influxdb_cli2(influxdb_url, influxdb_token, org=influxdb_org, bucket=influxdb_bucket)
 
     symo = Symo(ipaddr)
-    print("Found Inverter {0}".format(symo.name))
+    logging.info("Found Inverter {0}".format(symo.name))
 
     parameters = symo.get_all_parameters()
     parameter_ignore = 'Sunspec'
@@ -57,7 +61,7 @@ if __name__ == "__main__":
             value = symo.read_data(name)
 
             if args.verbose:
-                print('{0} = {1}'.format(name,value))
+                logging.info('{0} = {1}'.format(name,value))
 
             influxdb.write_sensordata(influxdb_table, name, value)
             time.sleep(0.02)
@@ -68,7 +72,7 @@ if __name__ == "__main__":
             value = symo.read_calculated_value(name)
 
             if args.verbose:
-                print('{0} = {1}'.format(name,value))
+                logging.info('{0} = {1}'.format(name,value))
 
             influxdb.write_sensordata(influxdb_table, name, value)
             time.sleep(0.02)
