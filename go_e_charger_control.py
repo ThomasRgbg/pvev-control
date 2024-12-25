@@ -278,7 +278,8 @@ class evcontrol:
         self.write_value_to_db('go_e_i_l2', go_e_charger_dump['i_l2'])
         self.write_value_to_db('go_e_i_l3', go_e_charger_dump['i_l3'])
         self.write_value_to_db('go_e_p_all', go_e_charger_dump['p_all'])
-        self.write_value_to_db('go_e_model_status', go_e_charger_dump['model_status'])
+        # TODO: model_status is string, can't write as value to db.
+        # self.write_value_to_db('go_e_model_status', go_e_charger_dump['model_status'])
 
 
         self.write_value_to_db('energy_total', go_e_charger_dump['energy_total'])
