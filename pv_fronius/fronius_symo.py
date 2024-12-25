@@ -460,11 +460,11 @@ class Symo:
     #
     def enable(self, enable=True, auto=False):
         if auto==True:
-            if self.read_data("MPPT_1_DC_Voltage") < 50 and self.read_data("MPPT_2_DC_Voltage") < 50:
+            if self.read_data("MPPT_1_DC_Voltage") < 70 and self.read_data("MPPT_2_DC_Voltage") < 70:
                 logging.info("Low voltage on Gen24, switch off")
                 self.write_data("Control_conn",0)
 
-            elif self.read_data("MPPT_1_DC_Voltage") > 85 or self.read_data("MPPT_2_DC_Voltage") > 85:
+            elif self.read_data("MPPT_1_DC_Voltage") > 120 or self.read_data("MPPT_2_DC_Voltage") > 120:
                 logging.info("minimal voltage on Gen24 reached, switch on")
                 self.write_data("Control_conn",1)
         else:
