@@ -12,6 +12,10 @@ from pyModbusTCP import utils
 
 import time
 import math
+import logging
+
+logging.basicConfig(format='fronius_symo: %(message)s', level=logging.INFO)
+
 
 class Symo:
     def __init__(self, ipaddr, model="autodetect"):
@@ -163,12 +167,12 @@ class Symo:
         self.modbus.unit_id = 1
         sunspecid = self.read_uint16(40070)
         if sunspecid != 113:
-            print("Warning: Invalid SunspecID, wrong device ?")
+            logging.warning("Warning: Invalid SunspecID, wrong device ?")
 
         if self.model == "autodetect":
             self.name = self.read_string(40021, 16)
             if self.name == None:
-                print("Error, could not identify Fronius device")
+                logging.error("Error, could not identify Fronius device")
             elif "GEN24" in self.name:
                 self.registers = registers_gen24
                 self.calculated_parameters = calculated_parameters_gen24
@@ -184,36 +188,36 @@ class Symo:
             self.registers = registers_symo
             self.calculated_parameters = calculated_parameters_symo
         else:
-            print("Error: Unkown symo model")
+            logging.error("Error: Unkown symo model")
                                       
     def read_uint16(self, addr):
         regs = self.modbus.read_holding_registers(addr-1, 2)
         if regs:
             if regs[0] == 0xffff:
-                print("read_uint16() - invalid value/no data")
+                logging.error("read_uint16() - invalid value/no data - addr: {0}".format(addr))
                 return None
             else:
                 return int(regs[0])
         else:
-            print("read_uint16() - error")
+            logging.error("read_uint16() - error")
             return False
       
     def read_uint32(self, addr):
         regs = self.modbus.read_holding_registers(addr-1, 2)
         if regs:
             if regs[0] == 0xffff and regs[1] == 0xffff:
-                print("read_uint32() - invalid value/no data")
+                logging.error("read_uint32() - invalid value/no data - addr: {0}".format(addr))
                 return None
             else:
                 return int(utils.word_list_to_long(regs, big_endian=True)[0])
         else:
-            print("read_uint32() - error")
+            logging.error("read_uint32() - error - addr: {0}".format(addr))
             return False
         
     def read_float(self, addr):
         regs = self.modbus.read_holding_registers(addr-1, 2)
         if not regs:
-            print("read_float() - error")
+            logging.error("read_float() - error - addr: {0}".format(addr))
             return False
 
         list_32_bits = utils.word_list_to_long(regs, big_endian=True)
@@ -226,13 +230,13 @@ class Symo:
     def read_uint16_sunssf(self, addrs):
         value = self.modbus.read_holding_registers(addrs[0]-1, 1)
         scalereg = self.modbus.read_holding_registers(addrs[1]-1, 1)
-        # print(value[0],scalereg[0])
+        # logging.info(value[0],scalereg[0])
         if value and scalereg:
             if scalereg[0] == 0x8000:
-                print("read_uint16_sunssf() - invalid value/no data")
+                logging.error("read_uint16_sunssf() - invalid value/no data - addr: {0}".format(addr))
                 return None
             elif value[0] == 0xffff:
-                print("read_uint16_sunssf() - invalid value/no data")
+                logging.error("read_uint16_sunssf() - invalid value/no data - addr: {0}".format(addr))
                 return None
             elif scalereg[0] > 32768:   # Bad hack for int16 conversion
                 scalef = 10**(scalereg[0]-65536)
@@ -240,19 +244,19 @@ class Symo:
                 scalef = 10**(scalereg[0])
             return float(value[0] * scalef)
         else:
-            print("read_uint16_sunssf() - error")
+            logging.error("read_uint16_sunssf() - error - addr: {0}".format(addr))
             return False
 
     def read_int16_sunssf(self, addrs):
         value = self.modbus.read_holding_registers(addrs[0]-1, 1)
         scalereg = self.modbus.read_holding_registers(addrs[1]-1, 1)
-        # print(value[0],scalereg[0])
+        # logging.info(value[0],scalereg[0])
         if value and scalereg:
             if scalereg[0] == 0x8000:
-                print("read_uint16_sunssf() - invalid value/no data")
+                logging.error("read_uint16_sunssf() - invalid value/no data - addr: {0}".format(addr))
                 return None
             elif value[0] == 0xffff:
-                print("read_uint16_sunssf() - invalid value/no data")
+                logging.error("read_uint16_sunssf() - invalid value/no data - addr: {0}".format(addr))
                 return None
             elif scalereg[0] > 32768:   # Bad hack for int16 conversion
                 scalef = 10**(scalereg[0]-65536)
@@ -262,20 +266,20 @@ class Symo:
                 value[0] = value[0] - 0xffff
             return float(value[0] * scalef)
         else:
-            print("read_int16_sunssf() - error")
+            logging.error("read_int16_sunssf() - error - addr: {0}".format(addr))
             return False
 
     def read_acc32_sunssf(self, addrs):
         regs = self.modbus.read_holding_registers(addrs[0]-1, 2)
         value = int(utils.word_list_to_long(regs, big_endian=True)[0])
         scalereg = self.modbus.read_holding_registers(addrs[1]-1, 1)
-        # print(regs,scalereg[0])
+        # logging.info(regs,scalereg[0])
         if regs and scalereg:
             if scalereg[0] == 0x8000:
-                print("read_acc32_sunssf() - invalid value/no data")
+                logging.error("read_acc32_sunssf() - invalid value/no data - addr: {0}".format(addr))
                 return None
             elif value == 0xffffffff:
-                print("read_acc32_sunssf() - invalid value/no data")
+                logging.error("read_acc32_sunssf() - invalid value/no data - addr: {0}".format(addr))
                 return None
             elif scalereg[0] > 32768:   # Bad hack for int16 conversion
                 scalef = 10**(scalereg[0]-65536)
@@ -283,7 +287,7 @@ class Symo:
                 scalef = 10**(scalereg[0])
             return float(value * scalef)
         else:
-            print("read_acc32_sunssf() - error")
+            logging.error("read_acc32_sunssf() - error - addr: {0}".format(addr))
             return False
 
     def read_string(self, addr, size):
@@ -388,22 +392,22 @@ class Symo:
             return False
 
     def print_all(self):
-        print("Show all registers:")
+        logging.info("Show all registers:")
         for name, params in self.registers.items():
             value = self.read_data(name)
             if value is not None:
                 if type(params[0]) is list:
-                    print("{0:d}: {1:s} - {2:2.1f}".format(params[0][0], name, value))
+                    logging.info("{0:d}: {1:s} - {2:2.1f}".format(params[0][0], name, value))
                 elif type(value) is str:
-                    print("{0:d}: {1:s} - {2:s} ".format(params[0], name, value))
+                    logging.info("{0:d}: {1:s} - {2:s} ".format(params[0], name, value))
                 else:
-                    print("{0:d}: {1:s} - {2:2.1f}".format(params[0], name, value))
+                    logging.info("{0:d}: {1:s} - {2:2.1f}".format(params[0], name, value))
                 
     def print_all_calculated(self):
-        print("Show all calculated values:")
+        logging.info("Show all calculated values:")
         for name, params in self.calculated_parameters.items():
             value = self.read_calculated_value(name)
-            print("{0:s} - {1:2.1f}".format(name, value))
+            logging.info("{0:s} - {1:2.1f}".format(name, value))
         
     def get_all_parameters(self):
         return list(self.registers.keys())
@@ -413,26 +417,26 @@ class Symo:
     
     # To search for undocument registers.... 
     def print_raw(self):
-        print("Raw read 1000-2000:")
+        logging.info("Raw read 1000-2000:")
         for i in range(40000,40200,1):
             value = self.read_uint16(i)
             if value:
-#                print("{0:d}: {1:2.1f}".format(i, value))
-                print("{0:d}: {1:d} (0x{2:x}),".format(i, value,value))
+#                logging.info("{0:d}: {1:2.1f}".format(i, value))
+                logging.info("{0:d}: {1:d} (0x{2:x}),".format(i, value,value))
             #else:
-            #    print("{0:d}: error".format(i))
+            #    logging.info("{0:d}: error".format(i))
         
     # See https://loxwiki.atlassian.net/wiki/spaces/LOXEN/pages/1316061809/Fronius+Hybrid+with+Modbus+TCP
     # Positive = Limit Charge Power (Not more than X*100W Charge, depdend on Sun)
     # Negative = Discharge Battery (X * 100W Discharge, House + Grid)
     def set_battery_charge_rate(self, power):
         if power == None:
-            print("Disable Battery Charge Limit")
+            logging.info("Disable Battery Charge Limit")
             reg = self.read_data('Battery_StorCtl_Mod')
             reg = reg & 0xfffe # clear bit 0
             self.write_data('Battery_StorCtl_Mod',reg)
         else:
-            print("Setting Charge limit to {0}".format(power))
+            logging.info("Setting Charge limit to {0}".format(power))
             reg = self.read_data('Battery_StorCtl_Mod')
             reg = reg | 0x1 # set bit 0
             self.write_data('Battery_StorCtl_Mod',reg)
@@ -442,12 +446,12 @@ class Symo:
     # Negative = Force Loading of Battery (Charge X*100W into Battery)
     def set_battery_discharge_rate(self, power):
         if power == None:
-            print("Disable Battery discharge Limit")
+            logging.info("Disable Battery discharge Limit")
             reg = self.read_data('Battery_StorCtl_Mod')
             reg = reg & 0xfffd # clear bit 0
             self.write_data('Battery_StorCtl_Mod',reg)
         else:
-            print("Setting discharge limit to {0}".format(power))
+            logging.info("Setting discharge limit to {0}".format(power))
             reg = self.read_data('Battery_StorCtl_Mod')
             reg = reg | 0x2 # set bit 1
             self.write_data('Battery_StorCtl_Mod',reg)
@@ -457,11 +461,11 @@ class Symo:
     def enable(self, enable=True, auto=False):
         if auto==True:
             if self.read_data("MPPT_1_DC_Voltage") < 50 and self.read_data("MPPT_2_DC_Voltage") < 50:
-                print("Low voltage on Gen24, switch off")
+                logging.info("Low voltage on Gen24, switch off")
                 self.write_data("Control_conn",0)
 
             elif self.read_data("MPPT_1_DC_Voltage") > 85 or self.read_data("MPPT_2_DC_Voltage") > 85:
-                print("minimal voltage on Gen24 reached, switch on")
+                logging.info("minimal voltage on Gen24 reached, switch on")
                 self.write_data("Control_conn",1)
         else:
             if enable == True:
@@ -471,17 +475,17 @@ class Symo:
 
     # Does not really work?
     def trigger_isolation_measurement(self):
-        print("Trigger isolation measurement")
-        print(self.read_uint16(40246))
-        print(self.read_uint16(40240))
-        print(self.read_uint16(40241))
-        print(self.read_uint16(40242))
-        print(self.read_uint16(40243))
+        logging.info("Trigger isolation measurement")
+        logging.info(self.read_uint16(40246))
+        logging.info(self.read_uint16(40240))
+        logging.info(self.read_uint16(40241))
+        logging.info(self.read_uint16(40242))
+        logging.info(self.read_uint16(40243))
         self.write_uint16(40230,300)
         self.write_uint16(40242,0)
         time.sleep(90)
         self.write_uint16(40242,1)
-        print(self.read_uint16(40246))
+        logging.info(self.read_uint16(40246))
 
     
 # Test area
@@ -509,14 +513,14 @@ if __name__ == "__main__":
         symo.print_all_calculated()
 
     if args.test:
-        print("Test results")
+        logging.info("Test results")
         
         # Current AC Output Power
-        # print(symo.read_float(40092))
+        # logging.info(symo.read_float(40092))
         
-        print(symo.read_data("Sunspec_Common_ID"))
+        logging.info(symo.read_data("Sunspec_Common_ID"))
 
-    #    print(symo.read_uint32(40286))
+    #    logging.info(symo.read_uint32(40286))
 
     #    symo.set_battery_charge_rate(None)
     #    symo.set_battery_charge_rate(None)
@@ -532,28 +536,28 @@ if __name__ == "__main__":
     #    time.sleep(90)
     #    symo.write_uint16(40242,1)
 
-    #    print(symo.read_uint16(40359))
+    #    logging.info(symo.read_uint16(40359))
         
-        #print(symo.get_all_parameters())
+        #logging.info(symo.get_all_parameters())
 
-        # print(symo.read_calculated_value('Consumption_Sum'))
+        # logging.info(symo.read_calculated_value('Consumption_Sum'))
                 
         # symo.modbus.unit_id = 200
         # symo.print_raw()
 
-        # print(symo.read_uint16(40069))
+        # logging.info(symo.read_uint16(40069))
 
-        # print(symo.modbus.unit_id)
+        # logging.info(symo.modbus.unit_id)
             
         # symo.modbus._unit_id = 200
-        # print(symo.modbus.unit_id)
+        # logging.info(symo.modbus.unit_id)
 
-        #print(symo.read_uint16(40100))
-        #print(symo.read_uint16(40102))
-        #print(symo.read_uint16(40104))
-        # print(symo.read_float(40098))
+        #logging.info(symo.read_uint16(40100))
+        #logging.info(symo.read_uint16(40102))
+        #logging.info(symo.read_uint16(40104))
+        # logging.info(symo.read_float(40098))
         
-        # print(symo.get_mppt_power())
+        # logging.info(symo.get_mppt_power())
         
         # symo.modbus.unit_id(1)
 
