@@ -233,10 +233,10 @@ class Symo:
         # logging.info(value[0],scalereg[0])
         if value and scalereg:
             if scalereg[0] == 0x8000:
-                logging.error("read_uint16_sunssf() - invalid value/no data - addr: {0}".format(addr))
+                logging.error("read_uint16_sunssf() - invalid value/no data - addr: {0}".format(addrs[0]))
                 return None
             elif value[0] == 0xffff:
-                logging.error("read_uint16_sunssf() - invalid value/no data - addr: {0}".format(addr))
+                logging.error("read_uint16_sunssf() - invalid value/no data - addr: {0}".format(addrs[0]))
                 return None
             elif scalereg[0] > 32768:   # Bad hack for int16 conversion
                 scalef = 10**(scalereg[0]-65536)
@@ -244,7 +244,7 @@ class Symo:
                 scalef = 10**(scalereg[0])
             return float(value[0] * scalef)
         else:
-            logging.error("read_uint16_sunssf() - error - addr: {0}".format(addr))
+            logging.error("read_uint16_sunssf() - error - addr: {0}".format(addrs[0]))
             return False
 
     def read_int16_sunssf(self, addrs):
@@ -253,10 +253,10 @@ class Symo:
         # logging.info(value[0],scalereg[0])
         if value and scalereg:
             if scalereg[0] == 0x8000:
-                logging.error("read_uint16_sunssf() - invalid value/no data - addr: {0}".format(addr))
+                logging.error("read_uint16_sunssf() - invalid value/no data - addr: {0}".format(addrs[0]))
                 return None
             elif value[0] == 0xffff:
-                logging.error("read_uint16_sunssf() - invalid value/no data - addr: {0}".format(addr))
+                logging.error("read_uint16_sunssf() - invalid value/no data - addr: {0}".format(addrs[0]))
                 return None
             elif scalereg[0] > 32768:   # Bad hack for int16 conversion
                 scalef = 10**(scalereg[0]-65536)
@@ -266,7 +266,7 @@ class Symo:
                 value[0] = value[0] - 0xffff
             return float(value[0] * scalef)
         else:
-            logging.error("read_int16_sunssf() - error - addr: {0}".format(addr))
+            logging.error("read_int16_sunssf() - error - addr: {0}".format(addrs[0]))
             return False
 
     def read_acc32_sunssf(self, addrs):
@@ -276,10 +276,10 @@ class Symo:
         # logging.info(regs,scalereg[0])
         if regs and scalereg:
             if scalereg[0] == 0x8000:
-                logging.error("read_acc32_sunssf() - invalid value/no data - addr: {0}".format(addr))
+                logging.error("read_acc32_sunssf() - invalid value/no data - addr: {0}".format(addrs[0]))
                 return None
             elif value == 0xffffffff:
-                logging.error("read_acc32_sunssf() - invalid value/no data - addr: {0}".format(addr))
+                logging.error("read_acc32_sunssf() - invalid value/no data - addr: {0}".format(addrs[0]))
                 return None
             elif scalereg[0] > 32768:   # Bad hack for int16 conversion
                 scalef = 10**(scalereg[0]-65536)
@@ -287,7 +287,7 @@ class Symo:
                 scalef = 10**(scalereg[0])
             return float(value * scalef)
         else:
-            logging.error("read_acc32_sunssf() - error - addr: {0}".format(addr))
+            logging.error("read_acc32_sunssf() - error - addr: {0}".format(addrs[0]))
             return False
 
     def read_string(self, addr, size):
