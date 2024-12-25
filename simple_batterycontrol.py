@@ -10,11 +10,14 @@ import paho.mqtt.client as paho
 import time
 import datetime
 import sys
+import logging
+
+logging.basicConfig(format='simple_batterycontrol: %(message)s', level=logging.INFO)
 
 gen24 = Symo(ipaddr=symo_ip[0])
 
 if gen24 is None:
-    print("Gen24 don't like to talk to us")
+    logging.warning("Gen24 don't like to talk to us")
     sys.exit(1)
 
 class battery:
@@ -26,7 +29,7 @@ class battery:
         self.cur_price = 10
         self.price_lim_discharge = 0.06
         self.price_lim_charge = 0.01
-        self.soc_lim_discharge = 70   # First discharge to xx %, then stop if price is low
+        self.soc_lim_discharge = 95   # First discharge to xx %, then stop if price is low
 
     def set_soc_lim_discharge(self, soc):
         if isinstance(soc, (int, float)):
@@ -49,17 +52,17 @@ class battery:
             self.operate = self.normal_operation
             self.override = False
             self.state_change = True
-            print("Set State to Auto")
+            logging.info("Set State to Auto")
         elif int(state) == 1:
             self.operate = self.normal_operation
             self.override = True
             self.state_change = True
-            print("Set State to Normal Operation (forced)")
+            logging.info("Set State to Normal Operation (forced)")
         elif int(state) == 2:
             self.operate = self.charge_only
-            self.override = True
+            self.override = Truet
             self.state_change = True
-            print("Set State to Charge Only (forced)")
+            logging.info("Set State to Charge Only (forced)")
         #elif int(state) == 3:
             #self.operate = self.slow_charge
             #self.override = False
@@ -69,24 +72,24 @@ class battery:
             self.operate = self.summer_mode
             self.override = False
             self.state_change = True
-            print("Set State to optimized for lot of sun")
+            logging.info("Set State to optimized for lot of sun")
         elif int(state) == 5:
             self.operate = self.low_price
             self.override = False
             self.state_change = True
-            print("Set State low price on grid")
+            logging.info("Set State low price on grid")
         elif int(state) == 6:
             self.operate = self.very_low_price
             self.override = False
             self.state_change = True
-            print("Set State very low price on grid")
+            logging.info("Set State very low price on grid")
         elif int(state) == 7:
             self.operate = self.battery_empty
             self.override = False
             self.state_change = True
-            print("Set State Battery empty")
+            logging.info("Set State Battery empty")
         else:
-            print("unknown state, nothing changed")
+            logging.warning("unknown state, nothing changed")
 
     def get_state(self):
         return self.state
@@ -101,32 +104,32 @@ class battery:
             # Wait after enable for startup
             time.sleep(30)
             
-            print("Battery: Setting Charge unlim, Discharge unlim")
+            logging.info("Battery: Setting Charge unlim, Discharge unlim")
             gen24.set_battery_discharge_rate(None)
             gen24.set_battery_charge_rate(None)
             self.state_change = False
 
 
         battery_soc = gen24.read_data("Battery_SoC")
-        print("Battery SOC {0}%, Lim SOC Discharge {1}%, Override {2}".format(battery_soc, self.soc_lim_discharge, self.override))
-        print("Current Price {0}, Lim Price Discharge {1}, Lim Price Charge {2}".format(self.cur_price, self.price_lim_discharge, self.price_lim_charge))
+        logging.info("Battery SOC {0}%, Lim SOC Discharge {1}%, Override {2}".format(battery_soc, self.soc_lim_discharge, self.override))
+        logging.info("Current Price {0}, Lim Price Discharge {1}, Lim Price Charge {2}".format(self.cur_price, self.price_lim_discharge, self.price_lim_charge))
         
         if (self.cur_price < self.price_lim_discharge) and (battery_soc < self.soc_lim_discharge) and not self.override:
-            print("Set state to low_price")
+            logging.info("Set state to low_price")
             self.operate = self.low_price
             self.state_change = True
         elif battery_soc < 15.0 and not self.override:
-            print("Set state to battery_empty")
+            logging.info("Set state to battery_empty")
             self.operate = self.battery_empty
             self.state_change = True
         else:
-            print("Keep state Normal Operation")
+            logging.info("Keep state Normal Operation")
             self.state_change = False
     
     def charge_only(self):
         self.state = 2
         if self.state_change:
-            print("Battery: Setting Charge unlim, Discharge 0")
+            logging.info("Battery: Setting Charge unlim, Discharge 0")
             gen24.set_battery_discharge_rate(0)
             gen24.set_battery_charge_rate(None)
             self.state_change = False
@@ -135,19 +138,19 @@ class battery:
         gen24.enable(auto=True)
 
         battery_soc = gen24.read_data("Battery_SoC")
-        print("Battery SOC {0}%, Lim SOC Discharge {1}%".format(battery_soc, self.soc_lim_discharge))
-        print("Current Price {0}, Lim Price Discharge {1}, Lim Price Charge {2}".format(self.cur_price, self.price_lim_discharge, self.price_lim_charge))
+        logging.info("Battery SOC {0}%, Lim SOC Discharge {1}%".format(battery_soc, self.soc_lim_discharge))
+        logging.info("Current Price {0}, Lim Price Discharge {1}, Lim Price Charge {2}".format(self.cur_price, self.price_lim_discharge, self.price_lim_charge))
         
         if self.cur_price < self.price_lim_charge and not self.override:
-            print("Set state to Very low price")
+            logging.info("Set state to Very low price")
             self.operate = self.very_low_price
             self.state_change = True
         elif (battery_soc > 25 and self.cur_price > self.price_lim_discharge) and not self.override:
-            print("Set state to Normal Operation")
+            logging.info("Set state to Normal Operation")
             self.operate = self.normal_operation
             self.state_change = True
         else:
-            print("Keep state Charge Only")
+            logging.info("Keep state Charge Only")
             self.state_change = False
 
     #def slow_charge(self):
@@ -172,34 +175,34 @@ class battery:
     def summer_mode(self):
         self.state = 4
         if self.state_change:
-            print("Battery: Setting Charge 0, Discharge unlim")
+            logging.info("Battery: Setting Charge 0, Discharge unlim")
             gen24.set_battery_discharge_rate(None)
             gen24.set_battery_charge_rate(0)
             self.state_change = False
 
         battery_soc = gen24.read_data("Battery_SoC")
-        print("Battary SOC {0}%".format(battery_soc))
+        logging.info("Battary SOC {0}%".format(battery_soc))
         
         if battery_soc < 50 and not self.override:
-            print("Battery below 50%, Charge with full power")
+            logging.info("Battery below 50%, Charge with full power")
             gen24.set_battery_charge_rate(None)
         else:
-            print("Battery only for surplus charges")
+            logging.info("Battery only for surplus charges")
             gen24.set_battery_charge_rate(0)
         
         # Fallback, should no thappen
         if battery_soc < 25 and not self.override:
-            print("Fallback... Set state to Normal Operation")
+            logging.info("Fallback... Set state to Normal Operation")
             self.operate = self.normal_operation
             self.state_change = True
         else:
-            print("Keep state Summer mode")
+            logging.info("Keep state Summer mode")
             self.state_change = False
 
     def low_price(self):
         self.state = 5
         if self.state_change:
-            print("Battery: Setting Charge unlim, Discharge 0")
+            logging.info("Battery: Setting Charge unlim, Discharge 0")
             gen24.set_battery_discharge_rate(0)
             gen24.set_battery_charge_rate(None)
             self.state_change = False
@@ -208,27 +211,27 @@ class battery:
         gen24.enable(auto=True)
 
         battery_soc = gen24.read_data("Battery_SoC")
-        print("Battery SOC {0}%, Lim SOC Discharge {1}%".format(battery_soc, self.soc_lim_discharge))
-        print("Current Price {0}, Lim Price Discharge {1}, Lim Price Charge {2}".format(self.cur_price, self.price_lim_discharge, self.price_lim_charge))
+        logging.info("Battery SOC {0}%, Lim SOC Discharge {1}%".format(battery_soc, self.soc_lim_discharge))
+        logging.info("Current Price {0}, Lim Price Discharge {1}, Lim Price Charge {2}".format(self.cur_price, self.price_lim_discharge, self.price_lim_charge))
         
         if self.cur_price < self.price_lim_charge and not self.override:
-            print("Set state to Very Low Price")
+            logging.info("Set state to Very Low Price")
             self.operate = self.very_low_price
             self.state_change = True
         elif (battery_soc >= 15 and self.cur_price > self.price_lim_discharge) and not self.override:
-            print("Set state to Normal Operation")
+            logging.info("Set state to Normal Operation")
             self.operate = self.normal_operation
             self.state_change = True
         elif (battery_soc > self.soc_lim_discharge) and not self.override:
-            print("Set state to Normal Operation")
+            logging.info("Set state to Normal Operation")
             self.operate = self.normal_operation
             self.state_change = True
         elif battery_soc < 15:
-            print("Set state to battery_empty")
+            logging.info("Set state to battery_empty")
             self.operate = self.battery_empty
             self.state_change = True
         else:
-            print("Keep state Low Price")
+            logging.info("Keep state Low Price")
             self.state_change = False
 
     def very_low_price(self):
@@ -240,28 +243,28 @@ class battery:
         if self.state_change:
             # Wait for startup after enable
             time.sleep(30)
-            print("Battery: Setting Charge unlim, Discharge -5kW (=Charge Battery")
+            logging.info("Battery: Setting Charge unlim, Discharge -5kW (=Charge Battery")
             gen24.set_battery_discharge_rate(-50)
             gen24.set_battery_charge_rate(None)
             self.state_change = False
 
 
         battery_soc = gen24.read_data("Battery_SoC")
-        print("Battery SOC {0}%, Lim SOC Discharge {1}%".format(battery_soc, self.soc_lim_discharge))
-        print("Current Price {0}, Lim Price Discharge {1}, Lim Price Charge {2}".format(self.cur_price, self.price_lim_discharge, self.price_lim_charge))
+        logging.info("Battery SOC {0}%, Lim SOC Discharge {1}%".format(battery_soc, self.soc_lim_discharge))
+        logging.info("Current Price {0}, Lim Price Discharge {1}, Lim Price Charge {2}".format(self.cur_price, self.price_lim_discharge, self.price_lim_charge))
         
         if self.cur_price > self.price_lim_charge and not self.override:
-            print("Set state to Low Price")
+            logging.info("Set state to Low Price")
             self.operate = self.low_price
             self.state_change = True
         else:
-            print("Keep state Very Low Price")
+            logging.info("Keep state Very Low Price")
             self.state_change = False
 
     def battery_empty(self):
         self.state = 7
         if self.state_change:
-            print("Battery empty: Setting Charge unlim, Discharge 0")
+            logging.info("Battery empty: Setting Charge unlim, Discharge 0")
             gen24.set_battery_discharge_rate(0)
             gen24.set_battery_charge_rate(None)
             self.state_change = False
@@ -270,19 +273,19 @@ class battery:
         gen24.enable(auto=True)
 
         battery_soc = gen24.read_data("Battery_SoC")
-        print("Battery SOC {0}%".format(battery_soc))
-        print("Current Price {0}, Lim Price Discharge {1}, Lim Price Charge {2}".format(self.cur_price, self.price_lim_discharge, self.price_lim_charge))
+        logging.info("Battery SOC {0}%".format(battery_soc))
+        logging.info("Current Price {0}, Lim Price Discharge {1}, Lim Price Charge {2}".format(self.cur_price, self.price_lim_discharge, self.price_lim_charge))
 
         if self.cur_price < self.price_lim_charge and not self.override:
-            print("Set state to Very low price")
+            logging.info("Set state to Very low price")
             self.operate = self.very_low_price
             self.state_change = True
         elif (battery_soc > 25 and self.cur_price > self.price_lim_discharge) and not self.override:
-            print("Set state to Normal Operation")
+            logging.info("Set state to Normal Operation")
             self.operate = self.normal_operation
             self.state_change = True
         else:
-            print("Keep state Charge Only")
+            logging.info("Keep state Charge Only")
 
 bat = battery(gen24)
 
@@ -309,22 +312,22 @@ def on_connect(client, userdata, flags, rc):
 
 # The callback for when a PUBLISH message is received from the server.
 def on_message(client, userdata, msg):
-    print(msg.topic+": {0}".format(msg.payload) )
+    logging.info(msg.topic+": {0}".format(msg.payload) )
     if msg.topic == "pentling/pv_fronius/battery_state_set":
         if int(msg.payload) >= 0 and int(msg.payload) <= 5:
-            print("MQTT: receive battery_state_set {0}".format(msg.payload))
+            logging.info("MQTT: receive battery_state_set {0}".format(msg.payload))
             bat.set_state(int(msg.payload))
     if msg.topic == "pentling/pv_fronius/battery_price_lim_discharge":
         if float(msg.payload) >= 0 and float(msg.payload) <= 30.0:
-            print("MQTT: receive battery_price_lim_discharge {0}".format(msg.payload))
+            logging.info("MQTT: receive battery_price_lim_discharge {0}".format(msg.payload))
             bat.set_price_lim_discharge(float(msg.payload))
     if msg.topic == "pentling/pv_fronius/battery_price_lim_charge":
         if float(msg.payload) >= 0 and float(msg.payload) <= 30.0:
-            print("MQTT: receive battery_price_lim_charge {0}".format(msg.payload))
+            logging.info("MQTT: receive battery_price_lim_charge {0}".format(msg.payload))
             bat.set_price_lim_charge(float(msg.payload))
     if msg.topic == "pentling/pv_fronius/battery_soc_lim_discharge":
         if float(msg.payload) >= 0 and float(msg.payload) <= 100.0:
-            print("MQTT: receive battery_soc_lim_discharge {0}".format(msg.payload))
+            logging.info("MQTT: receive battery_soc_lim_discharge {0}".format(msg.payload))
             bat.set_soc_lim_discharge(float(msg.payload))
 
 mqtt= paho.Client()
@@ -348,17 +351,17 @@ while True:
     
     bat.operate()
     
-    print("MQTT: send battery_state {0}".format(int(bat.get_state())))
+    logging.info("MQTT: send battery_state {0}".format(int(bat.get_state())))
     mqtt.publish("pentling/pv_fronius/battery_state", int(bat.get_state()))
     influxdb.write_sensordata(influxdb_table, 'battery_state', int(bat.get_state()))
     influxdb.write_sensordata(influxdb_table, 'battery_price_lim_discharge', bat.price_lim_discharge)
     influxdb.write_sensordata(influxdb_table, 'battery_price_lim_charge', bat.price_lim_charge)
     influxdb.write_sensordata(influxdb_table, 'battery_soc_lim_discharge', bat.soc_lim_discharge)
 
-    print("--------")
+    logging.info("--------")
     for i in range(int(60)):
         time.sleep(5)
         #print(i)
         if bat.state_change == True:
-            print("break")
+            logging.info("break")
             break
