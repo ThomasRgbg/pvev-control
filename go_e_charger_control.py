@@ -161,7 +161,7 @@ class evcontrol:
     def state_min_auto_charging(self):
         self.update_values_before()
                 
-        if self.house_battery_soc < 50:
+        if self.house_battery_soc < 40:
             self.power_available.append(0.0)
             logging.info("-> House battery lower than 50%, don't do anything")
             self.debugstate = 12
@@ -317,7 +317,7 @@ class evcontrol:
             logging.info("Tendency to Switch off, counter {0}".format(self.needtoswitchcounter))
 
             
-            if self.needtoswitchcounter >= 8 or force == True:
+            if self.needtoswitchcounter >= 4 or force == True or p_avail <= 0.0:
                 self.needtoswitchcounter = 0
                 
                 logging.info("Really Switch off")
