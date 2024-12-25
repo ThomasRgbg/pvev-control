@@ -278,6 +278,7 @@ class evcontrol:
         self.write_value_to_db('go_e_i_l2', go_e_charger_dump['i_l2'])
         self.write_value_to_db('go_e_i_l3', go_e_charger_dump['i_l3'])
         self.write_value_to_db('go_e_p_all', go_e_charger_dump['p_all'])
+        self.write_value_to_db('go_e_model_status', go_e_charger_dump['model_status'])
 
 
         self.write_value_to_db('energy_total', go_e_charger_dump['energy_total'])
@@ -324,10 +325,12 @@ class evcontrol:
                 self.write_value_to_db('ev_switch_state', 0 )
                 self.go_e_charger.ForceOn = 0
 
-        if statistics.fmean(self.power_available) > 100:
-            time.sleep(5)
-        else:
+        if statistics.fmean(self.power_available) > 1000:
+            time.sleep(10)
+        elif statistics.fmean(self.power_available) > 100:
             time.sleep(55)
+        else:
+            time.sleep(175)
 
 golfonso = evcontrol(go_e_charger, gen24, influxdb2)
 
@@ -374,5 +377,5 @@ while True:
     
     golfonso.opmode()
 
-    time.sleep(10)
+    time.sleep(5)
 
