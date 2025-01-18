@@ -129,9 +129,9 @@ class evcontrol:
             #print("-> Getting significant power from Grid, no excess power available for EV")
             #self.debugstate = 3
 
-        if self.house_battery_soc < 40:
+        if self.house_battery_soc < 30:
             self.power_available.append(0.0)
-            logging.info("-> House battery lower than 40%, don't do anything")
+            logging.info("-> House battery lower than 30%, don't do anything")
             self.debugstate = 2
             
 
@@ -272,7 +272,7 @@ class evcontrol:
         self.write_value_to_db('power_available', statistics.fmean(self.power_available))
 
         go_e_charger_dump = go_e_charger.GetStatusAll(filtered=True)
-        print(go_e_charger_dump)
+        logging.info(go_e_charger_dump)
 
         self.write_value_to_db('go_e_i_l1', go_e_charger_dump['i_l1'])
         self.write_value_to_db('go_e_i_l2', go_e_charger_dump['i_l2'])
