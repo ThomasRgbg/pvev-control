@@ -161,9 +161,9 @@ class evcontrol:
     def state_min_auto_charging(self):
         self.update_values_before()
                 
-        if self.house_battery_soc < 40:
+        if self.house_battery_soc < 30:
             self.power_available.append(0.0)
-            logging.info("-> House battery lower than 50%, don't do anything")
+            logging.info("-> House battery lower than 30%, don't do anything")
             self.debugstate = 12
 
         elif self.power_to_grid < -100.0:
