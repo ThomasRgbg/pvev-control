@@ -183,7 +183,7 @@ class battery:
 
         battery_soc = gen24.read_data("Battery_SoC")
         pwr_pv = gen24.read_calculated_value("PV_Power")
-        pwr_consumption = self.gen24.read_calculated_value("Consumption_Sum")
+        pwr_consumption = gen24.read_calculated_value("Consumption_Sum")
         logging.info("Battery SOC {0}%, PV PWR = {1}W, Consumption = {2}W".format(battery_soc))
         
         if battery_soc < 50 and not self.override:
