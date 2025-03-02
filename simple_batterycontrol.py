@@ -30,6 +30,7 @@ class battery:
         self.price_lim_discharge = 0.06
         self.price_lim_charge = 0.01
         self.soc_lim_discharge = 95   # First discharge to xx %, then stop if price is low
+        self.summer_power_cap = 6500
 
     def set_soc_lim_discharge(self, soc):
         if isinstance(soc, (int, float)):
@@ -181,14 +182,23 @@ class battery:
             self.state_change = False
 
         battery_soc = gen24.read_data("Battery_SoC")
-        logging.info("Battary SOC {0}%".format(battery_soc))
+        pwr_pv = gen24.read_calculated_value("PV_Power")
+        pwr_consumption = self.gen24.read_calculated_value("Consumption_Sum")
+        logging.info("Battery SOC {0}%, PV PWR = {1}W, Consumption = {2}W".format(battery_soc))
         
         if battery_soc < 50 and not self.override:
             logging.info("Battery below 50%, Charge with full power")
             gen24.set_battery_charge_rate(None)
         else:
             logging.info("Battery only for surplus charges")
-            gen24.set_battery_charge_rate(0)
+            
+            pwr_charge = pwr_pv - (pwr_consumption + self.summer_power_cap)
+            
+            logging.info("Calculated charge power: {0}".format(pwr_charge))
+            if pwr_charge > 0:
+                gen24.set_battery_charge_rate(pwr_charge / 100)
+            else:
+                gen24.set_battery_charge_rate(0)
         
         # Fallback, should no thappen
         if battery_soc < 25 and not self.override:
