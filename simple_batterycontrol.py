@@ -370,7 +370,7 @@ while True:
 
     logging.info("--------")
     
-    if bat.state = 4:
+    if bat.state == 4:
         delay = 6
     else:
         delay = 60
