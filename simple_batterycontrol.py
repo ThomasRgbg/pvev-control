@@ -369,7 +369,13 @@ while True:
     influxdb.write_sensordata(influxdb_table, 'battery_soc_lim_discharge', bat.soc_lim_discharge)
 
     logging.info("--------")
-    for i in range(int(60)):
+    
+    if bat.state = 4:
+        delay = 6
+    else:
+        delay = 60
+    
+    for i in range(int(delay)):
         time.sleep(5)
         #print(i)
         if bat.state_change == True:
