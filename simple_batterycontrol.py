@@ -61,7 +61,7 @@ class battery:
             logging.info("Set State to Normal Operation (forced)")
         elif int(state) == 2:
             self.operate = self.charge_only
-            self.override = Truet
+            self.override = True
             self.state_change = True
             logging.info("Set State to Charge Only (forced)")
         #elif int(state) == 3:
@@ -350,11 +350,11 @@ bat.set_soc_lim_discharge(get_last_from_db('battery_soc_lim_discharge', searchin
 bat.set_price_lim_discharge(get_last_from_db('battery_price_lim_discharge', searchinterval=96))
 bat.set_price_lim_charge(get_last_from_db('battery_price_lim_charge', searchinterval=96))
     
-# laststate = get_last_from_db('battery_state', searchinterval=1)
-# if laststate == None:
-#     laststate = 0
-# 
-# bat.set_state(laststate)
+laststate = get_last_from_db('battery_state', searchinterval=1)
+if laststate == None:
+    laststate = 0
+elif laststate == 4:
+    bat.set_state(laststate)
 
 while True:
     bat.cur_price = get_current_price()
