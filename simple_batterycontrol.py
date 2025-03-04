@@ -31,6 +31,8 @@ class battery:
         self.price_lim_charge = 0.01
         self.soc_lim_discharge = 95   # First discharge to xx %, then stop if price is low
         self.summer_power_cap = 6500
+        self.iteration_delay_default = 5 * 60
+        self.iteration_delay = self.iteration_delay_default
 
     def set_soc_lim_discharge(self, soc):
         if isinstance(soc, (int, float)):
@@ -199,6 +201,12 @@ class battery:
                 gen24.set_battery_charge_rate(pwr_charge / 100)
             else:
                 gen24.set_battery_charge_rate(0)
+
+            if pwr_pv > self.summer_power_cap - 1000:
+                self.iteration_delay = 30
+            else:
+                self.iteration_delay = self.iteration_delay_default
+
         
         # Fallback, should no thappen
         if battery_soc < 25 and not self.override:
@@ -369,13 +377,8 @@ while True:
     influxdb.write_sensordata(influxdb_table, 'battery_soc_lim_discharge', bat.soc_lim_discharge)
 
     logging.info("--------")
-    
-    if bat.state == 4:
-        delay = 6
-    else:
-        delay = 60
-    
-    for i in range(int(delay)):
+
+    for i in range(int(bat.iteration_delay/5.0)):
         time.sleep(5)
         #print(i)
         if bat.state_change == True:
