@@ -179,18 +179,18 @@ class evcontrol:
             logging.info("-> Getting significant power from Grid, no excess power available for EV")
             self.debugstate = 13
 
-        elif self.power_generated > 5500.0:
-            if (self.power_generated-5500) > (self.power_consumption - self.power_to_ev):
-                self.power_available.append((self.power_generated-5500) - (self.power_consumption - self.power_to_ev))
-                logging.info("-> PV-Generating at least more than 5500W")
+        elif self.power_generated > 4500.0:
+            if (self.power_generated-4500) > (self.power_consumption - self.power_to_ev):
+                self.power_available.append((self.power_generated-4500) - (self.power_consumption - self.power_to_ev))
+                logging.info("-> PV-Generating at least more than 4500W")
                 self.debugstate = 15
             else:
                 self.power_available.append(0.0)
-                logging.info("-> PV-Generating at least more than 5500W, but house takes it already")
+                logging.info("-> PV-Generating at least more than 4500W, but house takes it already")
                 self.debugstate = 16
         else:
             self.power_available.append(0.0)
-            logging.info("Less than 5500W generated")
+            logging.info("Less than 4500W generated")
             self.debugstate = 17
 
         self.do_switching(6*230.0)
