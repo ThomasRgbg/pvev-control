@@ -3,7 +3,9 @@
 from pv_fronius.fronius_symo import Symo
 from influxdb_cli2.influxdb_cli2 import influxdb_cli2
 
-from config_data import *
+from configparser import RawConfigParser
+
+#from config_data import *
 
 import paho.mqtt.client as paho
 
@@ -11,10 +13,16 @@ import time
 import datetime
 import sys
 import logging
+import os
+
+
+config = RawConfigParser(delimiters='=')
+config.read(os.path.dirname(os.path.realpath(__file__)) + '/config/simple_batterycontrol.cfg')
+
 
 logging.basicConfig(format='simple_batterycontrol: %(message)s', level=logging.INFO)
 
-gen24 = Symo(ipaddr=symo_ip[0])
+gen24 = Symo(ipaddr=config.get('symo','ipaddr'))
 
 if gen24 is None:
     logging.warning("Gen24 don't like to talk to us")
@@ -307,9 +315,14 @@ class battery:
 
 bat = battery(gen24)
 
-influxdb = influxdb_cli2(influxdb_url, influxdb_token, influxdb_org, influxdb_bucket)
-influxdb_table = 'pv_fronius'    
+influxdb = influxdb_cli2(config.get('influxdb','url', raw=True), 
+                        token=config.get('influxdb','token'), 
+                        org=config.get('influxdb','org'), 
+                        bucket=config.get('influxdb','bucket'),
+                        debug=False,
+                        )
 
+influxdb_table = 'pv_fronius'    
 
 def get_last_from_db(name, searchinterval=24, location='pv_fronius'):
     results = influxdb.query_data(location, name, datetime.datetime.utcnow()+datetime.timedelta(hours=(searchinterval*-1)), datetime.datetime.utcnow())
@@ -351,7 +364,10 @@ def on_message(client, userdata, msg):
 mqtt= paho.Client()
 mqtt.on_connect = on_connect
 mqtt.on_message = on_message
-mqtt.connect(mqtt_ip, mqtt_port)
+#mqtt.connect(mqtt_ip, mqtt_port)
+mqtt.connect(config.get('mqtt','server'),config.getint('mqtt','port'))
+
+
 mqtt.loop_start()
 
 bat.set_soc_lim_discharge(get_last_from_db('battery_soc_lim_discharge', searchinterval=96))
