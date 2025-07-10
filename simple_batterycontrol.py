@@ -5,8 +5,6 @@ from influxdb_cli2.influxdb_cli2 import influxdb_cli2
 
 from configparser import RawConfigParser
 
-#from config_data import *
-
 import paho.mqtt.client as paho
 
 import time
@@ -17,7 +15,8 @@ import os
 
 
 config = RawConfigParser(delimiters='=')
-config.read(os.path.dirname(os.path.realpath(__file__)) + '/config/simple_batterycontrol.cfg')
+config.configfile = os.path.dirname(os.path.realpath(__file__)) + '/config/simple_batterycontrol.cfg'
+config.read(config.configfile)
 
 
 logging.basicConfig(format='simple_batterycontrol: %(message)s', level=logging.INFO)
@@ -39,6 +38,7 @@ class battery:
         self.price_lim_charge = 0.01
         self.soc_lim_discharge = 95   # First discharge to xx %, then stop if price is low
         self.summer_power_cap = 6500
+        self.summer_min_charge = 50
         self.iteration_delay_default = 5 * 60
         self.iteration_delay = self.iteration_delay_default
 
@@ -196,8 +196,8 @@ class battery:
         pwr_consumption = gen24.read_calculated_value("Consumption_Sum")
         logging.info("Battery SOC {0}%, PV PWR = {1}W, Consumption = {2}W".format(battery_soc, pwr_pv, pwr_consumption))
         
-        if battery_soc < 50 and not self.override:
-            logging.info("Battery below 50%, Charge with full power")
+        if battery_soc < self.summer_min_charge and not self.override:
+            logging.info("Battery below {0}%, Charge with full power".format(self.summer_min_charge))
             gen24.set_battery_charge_rate(None)
         else:
             logging.info("Battery only for surplus charges")
@@ -313,7 +313,6 @@ class battery:
         else:
             logging.info("Keep state Charge Only")
 
-bat = battery(gen24)
 
 influxdb = influxdb_cli2(config.get('influxdb','url', raw=True), 
                         token=config.get('influxdb','token'), 
@@ -334,27 +333,27 @@ def get_current_price():
 
 def on_connect(client, userdata, flags, rc):
     # print("Connection returned result: " + str(rc))
-    client.subscribe(client.bat_topic + "battery_state_set", 1)
-    client.subscribe(client.bat_topic + "battery_price_lim_discharge", 1)
-    client.subscribe(client.bat_topic + "battery_price_lim_charge", 1)
-    client.subscribe(client.bat_topic + "battery_soc_lim_discharge", 1)
+    client.subscribe(client.bat_topic + "/battery_state_set", 1)
+    client.subscribe(client.bat_topic + "/battery_price_lim_discharge", 1)
+    client.subscribe(client.bat_topic + "/battery_price_lim_charge", 1)
+    client.subscribe(client.bat_topic + "/battery_soc_lim_discharge", 1)
 
 # The callback for when a PUBLISH message is received from the server.
 def on_message(client, userdata, msg):
     logging.info(msg.topic+": {0}".format(msg.payload) )
-    if msg.topic == client.bat_topic + "battery_state_set":
+    if msg.topic == client.bat_topic + "/battery_state_set":
         if int(msg.payload) >= 0 and int(msg.payload) <= 5:
             logging.info("MQTT: receive battery_state_set {0}".format(msg.payload))
             bat.set_state(int(msg.payload))
-    if msg.topic == client.bat_topic + "battery_price_lim_discharge":
+    if msg.topic == client.bat_topic + "/battery_price_lim_discharge":
         if float(msg.payload) >= 0 and float(msg.payload) <= 30.0:
             logging.info("MQTT: receive battery_price_lim_discharge {0}".format(msg.payload))
             bat.set_price_lim_discharge(float(msg.payload))
-    if msg.topic == client.bat_topic + "battery_price_lim_charge":
+    if msg.topic == client.bat_topic + "/battery_price_lim_charge":
         if float(msg.payload) >= 0 and float(msg.payload) <= 30.0:
             logging.info("MQTT: receive battery_price_lim_charge {0}".format(msg.payload))
             bat.set_price_lim_charge(float(msg.payload))
-    if msg.topic == client.bat_topic + "battery_soc_lim_discharge":
+    if msg.topic == client.bat_topic + "/battery_soc_lim_discharge":
         if float(msg.payload) >= 0 and float(msg.payload) <= 100.0:
             logging.info("MQTT: receive battery_soc_lim_discharge {0}".format(msg.payload))
             bat.set_soc_lim_discharge(float(msg.payload))
@@ -362,18 +361,21 @@ def on_message(client, userdata, msg):
 mqtt= paho.Client()
 mqtt.on_connect = on_connect
 mqtt.on_message = on_message
-#mqtt.connect(mqtt_ip, mqtt_port)
 mqtt.bat_topic = config.get('mqtt','topic')
 mqtt.connect(config.get('mqtt','server'),config.getint('mqtt','port'))
 mqtt.loop_start()
 
+bat = battery(gen24)
 bat.set_soc_lim_discharge(get_last_from_db('battery_soc_lim_discharge', searchinterval=96))
 bat.set_price_lim_discharge(get_last_from_db('battery_price_lim_discharge', searchinterval=96))
 bat.set_price_lim_charge(get_last_from_db('battery_price_lim_charge', searchinterval=96))
-    
-laststate = get_last_from_db('battery_state', searchinterval=1)
+
+bat.summer_min_charge = config.getint('battery','summer_min_charge', fallback = 50)
+bat.summer_power_cap = config.getint('battery','summer_power_cap', fallback = 6500)
+
+laststate = get_last_from_db('battery_state', searchinterval=2)
 if laststate == None:
-    laststate = 0
+    laststate = config.getint('battery','state')
 elif laststate == 4:
     bat.set_state(laststate)
 
@@ -382,14 +384,17 @@ while True:
     
     bat.operate()
     
-    logging.info("MQTT: send battery_state {0}".format(int(bat.get_state())))
-    mqtt.publish(client.bat_topic + "battery_state", int(bat.get_state()))
+    logging.info("battery_state {0}".format(int(bat.get_state())))
     influxdb.write_sensordata('pv_fronius', 'battery_state', int(bat.get_state()))
+    # config.set('battery','state',int(bat.get_state()))
+    
     influxdb.write_sensordata('pv_fronius', 'battery_price_lim_discharge', bat.price_lim_discharge)
     influxdb.write_sensordata('pv_fronius', 'battery_price_lim_charge', bat.price_lim_charge)
     influxdb.write_sensordata('pv_fronius', 'battery_soc_lim_discharge', bat.soc_lim_discharge)
 
     logging.info("--------")
+
+    # config.write(config.configfile)
 
     for i in range(int(bat.iteration_delay/5.0)):
         time.sleep(5)
