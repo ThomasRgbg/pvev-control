@@ -322,8 +322,6 @@ influxdb = influxdb_cli2(config.get('influxdb','url', raw=True),
                         debug=False,
                         )
 
-influxdb_table = 'pv_fronius'    
-
 def get_last_from_db(name, searchinterval=24, location='pv_fronius'):
     results = influxdb.query_data(location, name, datetime.datetime.utcnow()+datetime.timedelta(hours=(searchinterval*-1)), datetime.datetime.utcnow())
     if results:
@@ -336,27 +334,27 @@ def get_current_price():
 
 def on_connect(client, userdata, flags, rc):
     # print("Connection returned result: " + str(rc))
-    client.subscribe("pentling/pv_fronius/battery_state_set", 1)
-    client.subscribe("pentling/pv_fronius/battery_price_lim_discharge", 1)
-    client.subscribe("pentling/pv_fronius/battery_price_lim_charge", 1)
-    client.subscribe("pentling/pv_fronius/battery_soc_lim_discharge", 1)
+    client.subscribe(client.bat_topic + "battery_state_set", 1)
+    client.subscribe(client.bat_topic + "battery_price_lim_discharge", 1)
+    client.subscribe(client.bat_topic + "battery_price_lim_charge", 1)
+    client.subscribe(client.bat_topic + "battery_soc_lim_discharge", 1)
 
 # The callback for when a PUBLISH message is received from the server.
 def on_message(client, userdata, msg):
     logging.info(msg.topic+": {0}".format(msg.payload) )
-    if msg.topic == "pentling/pv_fronius/battery_state_set":
+    if msg.topic == client.bat_topic + "battery_state_set":
         if int(msg.payload) >= 0 and int(msg.payload) <= 5:
             logging.info("MQTT: receive battery_state_set {0}".format(msg.payload))
             bat.set_state(int(msg.payload))
-    if msg.topic == "pentling/pv_fronius/battery_price_lim_discharge":
+    if msg.topic == client.bat_topic + "battery_price_lim_discharge":
         if float(msg.payload) >= 0 and float(msg.payload) <= 30.0:
             logging.info("MQTT: receive battery_price_lim_discharge {0}".format(msg.payload))
             bat.set_price_lim_discharge(float(msg.payload))
-    if msg.topic == "pentling/pv_fronius/battery_price_lim_charge":
+    if msg.topic == client.bat_topic + "battery_price_lim_charge":
         if float(msg.payload) >= 0 and float(msg.payload) <= 30.0:
             logging.info("MQTT: receive battery_price_lim_charge {0}".format(msg.payload))
             bat.set_price_lim_charge(float(msg.payload))
-    if msg.topic == "pentling/pv_fronius/battery_soc_lim_discharge":
+    if msg.topic == client.bat_topic + "battery_soc_lim_discharge":
         if float(msg.payload) >= 0 and float(msg.payload) <= 100.0:
             logging.info("MQTT: receive battery_soc_lim_discharge {0}".format(msg.payload))
             bat.set_soc_lim_discharge(float(msg.payload))
@@ -365,9 +363,8 @@ mqtt= paho.Client()
 mqtt.on_connect = on_connect
 mqtt.on_message = on_message
 #mqtt.connect(mqtt_ip, mqtt_port)
+mqtt.bat_topic = config.get('mqtt','topic')
 mqtt.connect(config.get('mqtt','server'),config.getint('mqtt','port'))
-
-
 mqtt.loop_start()
 
 bat.set_soc_lim_discharge(get_last_from_db('battery_soc_lim_discharge', searchinterval=96))
@@ -386,11 +383,11 @@ while True:
     bat.operate()
     
     logging.info("MQTT: send battery_state {0}".format(int(bat.get_state())))
-    mqtt.publish("pentling/pv_fronius/battery_state", int(bat.get_state()))
-    influxdb.write_sensordata(influxdb_table, 'battery_state', int(bat.get_state()))
-    influxdb.write_sensordata(influxdb_table, 'battery_price_lim_discharge', bat.price_lim_discharge)
-    influxdb.write_sensordata(influxdb_table, 'battery_price_lim_charge', bat.price_lim_charge)
-    influxdb.write_sensordata(influxdb_table, 'battery_soc_lim_discharge', bat.soc_lim_discharge)
+    mqtt.publish(client.bat_topic + "battery_state", int(bat.get_state()))
+    influxdb.write_sensordata('pv_fronius', 'battery_state', int(bat.get_state()))
+    influxdb.write_sensordata('pv_fronius', 'battery_price_lim_discharge', bat.price_lim_discharge)
+    influxdb.write_sensordata('pv_fronius', 'battery_price_lim_charge', bat.price_lim_charge)
+    influxdb.write_sensordata('pv_fronius', 'battery_soc_lim_discharge', bat.soc_lim_discharge)
 
     logging.info("--------")
 
