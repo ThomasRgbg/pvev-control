@@ -39,6 +39,7 @@ class battery:
         self.soc_lim_discharge = 95   # First discharge to xx %, then stop if price is low
         self.summer_power_cap = 6500
         self.summer_min_charge = 50
+        self.pv_remaining = 60
         self.iteration_delay_default = 5 * 60
         self.iteration_delay = self.iteration_delay_default
 
@@ -199,6 +200,10 @@ class battery:
         if battery_soc < self.summer_min_charge and not self.override:
             logging.info("Battery below {0}%, Charge with full power".format(self.summer_min_charge))
             gen24.set_battery_charge_rate(None)
+            
+        elif ((100-battery_soc)*11) > (self.pv_remaining/2000):
+            logging.info("Battery {0}%, PV Remaining {1}, Charge with full power".format(battery_soc, self.pv_remaining))
+            gen24.set_battery_charge_rate(None)
         else:
             logging.info("Battery only for surplus charges")
             
@@ -323,6 +328,7 @@ influxdb = influxdb_cli2(config.get('influxdb','url', raw=True),
 
 def get_last_from_db(name, searchinterval=24, location='pv_fronius'):
     results = influxdb.query_data(location, name, datetime.datetime.utcnow()+datetime.timedelta(hours=(searchinterval*-1)), datetime.datetime.utcnow())
+    # print(name)
     if results:
         # print(results)
         # print(results[-1][3])
@@ -330,6 +336,9 @@ def get_last_from_db(name, searchinterval=24, location='pv_fronius'):
 
 def get_current_price():
     return get_last_from_db(name='price_total', searchinterval=1, location='grid_tibber')
+
+def get_pv_remaining():
+    return get_last_from_db(name='prediction_remaining', searchinterval=2, location='pv_prediction')
 
 def on_connect(client, userdata, flags, rc):
     # print("Connection returned result: " + str(rc))
@@ -380,7 +389,20 @@ elif laststate == 4:
     bat.set_state(laststate)
 
 while True:
-    bat.cur_price = get_current_price()
+    price = get_current_price()
+    if isinstance(price, float):
+        bat.cur_price = price
+    else:
+        logging.warning("No price found in DB, using 10.0 as fallback")
+        bat.cur_price = 10.0
+
+    pv_remaining = get_pv_remaining()
+    logging.info("Found in DB estimated pv_remaining {0} Wh".format(pv_remaining))
+    if isinstance(pv_remaining, float):
+        bat.pv_remaining = pv_remaining
+    else:
+        bat.pv_remaining = 0
+
     
     bat.operate()
     
