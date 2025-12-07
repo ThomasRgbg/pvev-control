@@ -34,7 +34,7 @@ if gen24 is None:
 def get_current_price():
     results = influxdb2.query_data('grid_tibber', 'price_total', datetime.datetime.utcnow()+datetime.timedelta(hours=-1), datetime.datetime.utcnow())
     if results:
-        return results[0][3]
+        return results[-1][3]
 
 class evcontrol:
     def __init__(self, go_e_charger, gen24, influxdb):
