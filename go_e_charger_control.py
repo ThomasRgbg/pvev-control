@@ -203,6 +203,17 @@ class evcontrol:
             self.do_sleep(360)
 
         self.update_values_after()
+
+        if self.go_e_charger.CableLocked() == True:
+            self.disconnectcounter = 0
+        else:
+            self.disconnectcounter += 1
+        
+        logging.info("disconnectcounter {0}".format(self.disconnectcounter))
+        if self.disconnectcounter > 15:
+            self.disconnectcounter = 0
+            self.change_mode(1)
+
     
     def state_manual_charging(self):
         self.modechange = False
@@ -216,7 +227,7 @@ class evcontrol:
         logging.info("disconnectcounter {0}".format(self.disconnectcounter))
         if self.disconnectcounter > 15:
             self.disconnectcounter = 0
-            self.change_mode(22)
+            self.change_mode(1)
 
         self.power_available = [0.0]
         self.update_values_before()
@@ -235,7 +246,7 @@ class evcontrol:
         logging.info("disconnectcounter {0}".format(self.disconnectcounter))
         if self.disconnectcounter > 15:
             self.disconnectcounter = 0
-            self.change_mode(22)
+            self.change_mode(1)
         
         self.update_values_before()
         self.power_available = [self.max_charge_power]
@@ -246,6 +257,18 @@ class evcontrol:
     def state_force_off_charging(self):
         self.modechange = False
         self.debugstate = 22
+
+        if self.go_e_charger.CableLocked() == True:
+            self.disconnectcounter = 0
+        else:
+            self.disconnectcounter += 1
+        
+        logging.info("disconnectcounter {0}".format(self.disconnectcounter))
+        if self.disconnectcounter > 15:
+            self.disconnectcounter = 0
+            self.change_mode(22)
+
+
         self.update_values_before()
         self.power_available = [0.0]
         self.do_switching(100000, force=True)
@@ -272,6 +295,16 @@ class evcontrol:
             self.do_switching(100000, force=True)
         logging.info("------------------------------------------")
         self.do_sleep(55)
+
+        if self.go_e_charger.CableLocked() == True:
+            self.disconnectcounter = 0
+        else:
+            self.disconnectcounter += 1
+        
+        logging.info("disconnectcounter {0}".format(self.disconnectcounter))
+        if self.disconnectcounter > 15:
+            self.disconnectcounter = 0
+            self.change_mode(22)
 
         self.update_values_after()
     
