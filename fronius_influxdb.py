@@ -5,6 +5,8 @@ import time
 import argparse
 import logging
 
+import paho.mqtt.client as paho
+
 from configparser import ConfigParser
 
 from config_data import *
@@ -43,20 +45,36 @@ else:
 
 if args.device and args.address:
     logging.error(
-        "Can not use predefined config and setting address via commandline at same time")
+        "Can not use predefined config and setting address  at same time")
     sys.exit(1)
 elif args.device:
     logging.info("Using device profile {0}".format(args.device))
     # Todo: make it more elegant
     if int(args.device) == 0:
-        ipaddr = config.get('symo0', 'ipaddr')
-        influxdb_table = config.get('symo0', 'database_table')
+        config_section = 'symo0'
     elif int(args.device) == 1:
-        ipaddr = config.get('symo1', 'ipaddr')
-        influxdb_table = config.get('symo1', 'database_table')
+        config_section = 'symo1'
     else:
-        logging.error("invalid device selected")
+        logging.error("invalid or unknown device selected")
         sys.exit(1)
+
+    ipaddr = config.get(config_section, 'ipaddr')
+    influxdb_table = config.get(config_section, 'database_table')
+
+    if config.get(config_section, 'publish_mqtt') == "true":
+        mqtt = paho.Client()
+        # For the moment publish only
+        # mqtt.on_connect = on_connect
+        # mqtt.on_message = on_message
+        mqtt.pv_topic = config.get(config_section, 'mqtt_topic')
+        mqtt.pv_publish_fronius = config.get(config_section,
+                                             'mqtt_publish_fronius').split(',')
+        mqtt.pv_publish_name = config.get(config_section,
+                                          'mqtt_publish_name').split(',')
+        mqtt.connect(config.get('mqtt', 'server'),
+                     config.getint('mqtt', 'port'))
+        mqtt.loop_start()
+
 elif args.address and args.database_table:
     ipaddr = args.address
     influxdb_table = args.database_table
@@ -87,6 +105,13 @@ while True:
             logging.info('{0} = {1}'.format(name, value))
 
         influxdb.write_sensordata(influxdb_table, name, value)
+
+        if name in mqtt.pv_publish_fronius:
+            topic = mqtt.pv_topic + '/' + mqtt.pv_publish_name[mqtt.pv_publish_fronius.index(name)]
+            if args.verbose:
+                logging.info('mqtt publish: {0} = {1}'.format(topic, value))
+            mqtt.publish(topic, value)
+
         time.sleep(0.02)
 
     for name in calculated_parameters:
@@ -98,6 +123,13 @@ while True:
             logging.info('{0} = {1}'.format(name, value))
 
         influxdb.write_sensordata(influxdb_table, name, value)
+
+        if name in mqtt.pv_publish_fronius:
+            topic = mqtt.pv_topic + '/' + mqtt.pv_publish_name[mqtt.pv_publish_fronius.index(name)]
+            if args.verbose:
+                logging.info('mqtt publish: {0} = {1}'.format(topic, value))
+            mqtt.publish(topic, value)
+
         time.sleep(0.02)
 
     time.sleep(60)
