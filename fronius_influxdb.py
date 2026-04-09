@@ -61,19 +61,23 @@ elif args.device:
     ipaddr = config.get(config_section, 'ipaddr')
     influxdb_table = config.get(config_section, 'database_table')
 
-    if config.get(config_section, 'publish_mqtt') == "true":
+    if config.get(config_section, 'publish_mqtt', fallback="false") == "true":
         mqtt = paho.Client()
         # For the moment publish only
         # mqtt.on_connect = on_connect
         # mqtt.on_message = on_message
-        mqtt.pv_topic = config.get(config_section, 'mqtt_topic')
+        mqtt.pv_topic = config.get(config_section, 'mqtt_topic', fallback="")
         mqtt.pv_publish_fronius = config.get(config_section,
-                                             'mqtt_publish_fronius').split(',')
+                                             'mqtt_publish_fronius',
+                                             fallback="").split(',')
         mqtt.pv_publish_name = config.get(config_section,
-                                          'mqtt_publish_name').split(',')
+                                          'mqtt_publish_name',
+                                          fallback="").split(',')
         mqtt.connect(config.get('mqtt', 'server'),
                      config.getint('mqtt', 'port'))
         mqtt.loop_start()
+    else:
+        mqtt = None
 
 elif args.address and args.database_table:
     ipaddr = args.address
@@ -106,7 +110,7 @@ while True:
 
         influxdb.write_sensordata(influxdb_table, name, value)
 
-        if name in mqtt.pv_publish_fronius:
+        if mqtt is not None and name in mqtt.pv_publish_fronius:
             topic = mqtt.pv_topic + '/' + mqtt.pv_publish_name[mqtt.pv_publish_fronius.index(name)]
             if args.verbose:
                 logging.info('mqtt publish: {0} = {1}'.format(topic, value))
@@ -124,7 +128,7 @@ while True:
 
         influxdb.write_sensordata(influxdb_table, name, value)
 
-        if name in mqtt.pv_publish_fronius:
+        if mqtt is not None and name in mqtt.pv_publish_fronius:
             topic = mqtt.pv_topic + '/' + mqtt.pv_publish_name[mqtt.pv_publish_fronius.index(name)]
             if args.verbose:
                 logging.info('mqtt publish: {0} = {1}'.format(topic, value))
