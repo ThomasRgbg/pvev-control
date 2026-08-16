@@ -3,13 +3,16 @@
 # Version history
 # V1 Baseline
 # V2 fix consideration of min/max charging values
-# V3 use logging library 
- 
+# V3 use logging library
+# V4 rework to use configfile and MQTT of direct PV API access.
+
 from influxdb_cli2.influxdb_cli2 import influxdb_cli2
 from go_e_charger.go_e_charger_httpv2 import GoeCharger
 from pv_fronius.fronius_symo import Symo
 
 from config_data import *
+
+from configparser import ConfigParser
 
 import paho.mqtt.client as paho
 
@@ -18,12 +21,24 @@ import datetime
 import sys
 import logging
 import statistics
+import os
 
 logging.basicConfig(format='go_e_charger_control: %(message)s', level=logging.INFO)
 
-go_e_charger = GoeCharger(ipaddr=go_e_charger_ip)
-influxdb2 = influxdb_cli2(influxdb_url, influxdb_token, influxdb_org, influxdb_bucket)
-influxdb_table = go_e_table   
+config = ConfigParser(delimiters='=')
+config.configfile = os.path.dirname(os.path.realpath(__file__)) + '/config/go_e_charger_control.cfg'
+config.read(config.configfile)
+
+go_e_charger = GoeCharger(ipaddr=config.get('go_e_charger', 'ipaddr'))
+
+influxdb2 = influxdb_cli2(config.get('influxdb', 'url', raw=True),
+                          token=config.get('influxdb', 'token'),
+                          org=config.get('influxdb', 'org'),
+                          bucket=config.get('influxdb', 'bucket'),
+                          debug=False,
+                          )
+
+influxdb_table = config.get('go_e_charger', 'influxdb_table')
 
 gen24 = Symo(ipaddr=symo_ip[0])
 
@@ -31,38 +46,59 @@ if gen24 is None:
     logging.warning("Gen24 don't like to talk to us")
     sys.exit(1)
 
+
 def get_current_price():
-    results = influxdb2.query_data('grid_tibber', 'price_total', datetime.datetime.utcnow()+datetime.timedelta(hours=-1), datetime.datetime.utcnow())
+    results = influxdb2.query_data('grid_tibber',
+                                   'price_total',
+                                   datetime.datetime.utcnow()+datetime.timedelta(hours=-1), datetime.datetime.utcnow())
     if results:
         return results[-1][3]
+
 
 class evcontrol:
     def __init__(self, go_e_charger, gen24, influxdb):
         self.go_e_charger = go_e_charger
         self.gen24 = gen24
         self.influxdb = influxdb
-        
-        self.power_available = [ 3*230.0 ]
-        self.power_available_len = 4   #len(self.power_available)
+
+        self.power_available = [3*230.0]  # init value
+        self.power_available_len = 4   # len(self.power_available)
         self.debugstate = 0
+        self.errcount = 0
         self.modechange = False
 
-        self.house_battery_soc_min = 30
-        self.load_setup_from_db('house_battery_soc_min', self.house_battery_soc_min)
+        self.pv_power = 0.0
+        self.pv_power_timestamp = datetime.datetime.now()
 
-        self.charge_below_price = 0.0
-        self.load_setup_from_db('charge_below_price', self.charge_below_price)
-        
+        self.grid_power = 0.0
+        self.grid_power_timestamp = datetime.datetime.now()
+
+        self.power_consumption = 0.0
+        self.power_consumption_timestamp = datetime.datetime.now()
+
+        self.battery_soc = 0.0
+        self.battery_soc_timestamp = datetime.datetime.now()
+
+
+        self.house_battery_soc_min = int(config.get('parameters',
+                                                    'house_battery_soc_min',
+                                                    fallback=30))
+
+        self.charge_below_price = float(config.get('parameters',
+                                                   'charge_below_price',
+                                                   fallback=0.0))
+
         oldmode = self.get_setting_from_db('mode')
         if oldmode:
             logging.info("Reuse last mode from DB")
             self.change_mode(oldmode)
-            self.max_charge_power = 8000
-            self.load_setup_from_db('max_charge_power',self.max_charge_power)
+            self.max_charge_power = float(config.get('parameters',
+                                                     'max_charge_power',
+                                                     fallback=8000.0))
 
-            self.min_charge_power = 0
-            val = self.get_setting_from_db('min_charge_power')
-            self.load_setup_from_db('min_charge_power',self.min_charge_power)
+            self.min_charge_power = float(config.get('parameters',
+                                                     'min_charge_power',
+                                                     fallback=0.0))
 
         else:
             logging.info("Use default mode")
@@ -73,6 +109,20 @@ class evcontrol:
 
         self.update_values_before()
         self.update_values_after()
+
+    def get_pv_values(self):
+        now = datetime.datetime.now()
+        delta = datetime.timedelta(minutes=1)
+        if (now - (self.pv_power_timestamp + delta)).total_seconds() < 0:
+            return [None, None, None]
+        if (now - (self.grid_power_timestamp + delta)).total_seconds() > 0:
+            return [None, None, None]
+        if (now - (self.power_consumption_timestamp + delta)).total_seconds() > 0:
+            return [None, None, None]
+        if (now - (self.battery_soc_timestamp + delta)).total_seconds() > 0:
+            return [None, None, None]
+
+        return [self.pv_power, self.grid_power, self.power_consumption, self.battery_soc]
 
     def get_setting_from_db(self, name):
         results = influxdb2.query_data('ev_golf', name, datetime.datetime.utcnow()+datetime.timedelta(hours=-8), datetime.datetime.utcnow())
@@ -117,7 +167,8 @@ class evcontrol:
             self.change_mode(1)
         self.modechange = True
         self.write_value_to_db('mode', newmode, force=True)
-    
+        config.set('parameters', 'mode', str(newmode))
+
     def state_max_auto_charging(self):
         self.modechange = False
         self.update_values_before()
@@ -307,33 +358,54 @@ class evcontrol:
             self.change_mode(22)
 
         self.update_values_after()
-    
-    def update_values_before(self):
 
-        self.power_to_grid = self.gen24.read_data("Meter_Power_Total") * -1.0
+    def update_values_before(self):
+        [pv_power, grid_power, power_consumption, battery_soc] = self.get_pv_values()
+
+        if pv_power is None or grid_power is None or battery_soc is None:
+            self.errcount += 1
+        else:
+            self.power_to_grid = grid_power * - 1.0
+            self.power_generated = pv_power
+            self.house_battery_soc = battery_soc
+
+        # self.power_to_grid = self.gen24.read_data("Meter_Power_Total") * -1.0
         self.power_consumption = self.gen24.read_calculated_value("Consumption_Sum") 
-        self.power_generated = self.gen24.read_calculated_value("PV_Power")
+        #s elf.power_generated = self.gen24.read_calculated_value("PV_Power")
         self.power_to_ev = self.go_e_charger.P_All
-        self.house_battery_soc = self.gen24.read_data("Battery_SoC")
-        
+        # self.house_battery_soc = self.gen24.read_data("Battery_SoC")
+
         logging.info("pwr_gen: {0}, pwr_grid: {1}, pwr_consum: {2}, pwr_ev: {3}".format(self.power_generated, self.power_to_grid, self.power_consumption, self.power_to_ev))
 
         self.write_value_to_db('power_to_ev', self.power_to_ev)
         self.write_value_to_db('charge_below_price', self.charge_below_price)
-        self.write_value_to_db('house_battery_soc_min', self.house_battery_soc_min)
+        config.set('parameters', 'charge_below_price',
+                   str(self.charge_below_price))
 
+        config.set('parameters', 'house_battery_soc_min',
+                   str(self.house_battery_soc_min))
+
+        config.set('parameters', 'max_charge_power',
+                   str(self.max_charge_power))
+
+        config.set('parameters', 'min_charge_power',
+                   str(self.min_charge_power))
+
+        with open(config.configfile, 'w') as f:
+            config.write(f)
 
     def update_values_after(self):
 
         self.write_value_to_db('debugstate', self.debugstate)
-        self.write_value_to_db('power_available', statistics.fmean(self.power_available))
+        self.write_value_to_db('power_available',
+                               statistics.fmean(self.power_available))
 
         go_e_charger_dump = go_e_charger.GetStatusAll(filtered=True)
         logging.info(go_e_charger_dump)
 
-        #self.write_value_to_db('go_e_i_l1', go_e_charger_dump['i_l1'])
-        #self.write_value_to_db('go_e_i_l2', go_e_charger_dump['i_l2'])
-        #self.write_value_to_db('go_e_i_l3', go_e_charger_dump['i_l3'])
+        # self.write_value_to_db('go_e_i_l1', go_e_charger_dump['i_l1'])
+        # self.write_value_to_db('go_e_i_l2', go_e_charger_dump['i_l2'])
+        # self.write_value_to_db('go_e_i_l3', go_e_charger_dump['i_l3'])
         self.write_value_to_db('go_e_p_all', go_e_charger_dump['p_all'])
         # TODO: model_status is string, can't write as value to db.
         # self.write_value_to_db('go_e_model_status', go_e_charger_dump['model_status'])
@@ -393,6 +465,7 @@ class evcontrol:
 
 golfonso = evcontrol(go_e_charger, gen24, influxdb2)
 
+
 def on_connect(client, userdata, flags, rc):
     logging.debug("MQTT Connection returned result: " + str(rc))
     client.subscribe("pentling/ev_golf/change_mode", 1)
@@ -400,6 +473,11 @@ def on_connect(client, userdata, flags, rc):
     client.subscribe("pentling/ev_golf/min_charge_power", 1)
     client.subscribe("pentling/ev_golf/charge_below_price", 1)
     client.subscribe("pentling/ev_golf/house_battery_soc_min", 1)
+    client.subscribe("pentling/pv_pentling_fronius/pv_power", 1)
+    client.subscribe("pentling/pv_pentling_fronius/grid_power", 1)
+    client.subscribe("pentling/pv_pentling_fronius/power_consumption", 1)
+    client.subscribe("pentling/pv_pentling_fronius/battery_soc", 1)
+
 
 # The callback for when a PUBLISH message is received from the server.
 def on_message(client, userdata, msg):
@@ -412,35 +490,50 @@ def on_message(client, userdata, msg):
         if int(msg.payload) >= 0 and int(msg.payload) <= 8000:
             logging.info("MQTT max charge power {0}".format(msg.payload))
             golfonso.max_charge_power = int(msg.payload)
-            golfonso.write_value_to_db('max_charge_power', golfonso.max_charge_power, force=True)
     elif msg.topic == "pentling/ev_golf/min_charge_power":
         if int(msg.payload) >= 0 and int(msg.payload) <= 8000:
             logging.info("MQTT min charge power {0}".format(msg.payload))
             golfonso.min_charge_power = int(msg.payload)
-            golfonso.write_value_to_db('min_charge_power', golfonso.min_charge_power, force=True)
     elif msg.topic == "pentling/ev_golf/charge_below_price":
         if float(msg.payload) >= 0.0 and float(msg.payload) <= 2.0:
             logging.info("MQTT charge_below_price {0}".format(msg.payload))
             golfonso.charge_below_price = float(msg.payload)
-            golfonso.write_value_to_db('charge_below_price', golfonso.charge_below_price, force=True)
+            golfonso.write_value_to_db('charge_below_price',
+                                       golfonso.charge_below_price, force=True)
     elif msg.topic == "pentling/ev_golf/house_battery_soc_min":
         if float(msg.payload) >= 0.0 and float(msg.payload) <= 100.0:
             logging.info("MQTT house_battery_soc_min {0}".format(msg.payload))
             golfonso.house_battery_soc_min = float(msg.payload)
-            golfonso.write_value_to_db('house_battery_soc_min', golfonso.house_battery_soc_min, force=True)
+    elif msg.topic == "pentling/pv_pentling_fronius/pv_power":
+        if float(msg.payload) >= 0.0 and float(msg.payload) <= 10000.0:
+            logging.info("MQTT pv_power {0}".format(msg.payload))
+            golfonso.pv_power = float(msg.payload)
+            golfonso.pv_power_timestamp = datetime.datetime.now()
+    elif msg.topic == "pentling/pv_pentling_fronius/grid_power":
+        if float(msg.payload) >= 0.0 and float(msg.payload) <= 10000.0:
+            logging.info("MQTT grid_power {0}".format(msg.payload))
+            golfonso.grid_power = float(msg.payload)
+            golfonso.grid_power_timestamp = datetime.datetime.now()
+    elif msg.topic == "pentling/pv_pentling_fronius/power_consumption":
+        if float(msg.payload) >= 0.0 and float(msg.payload) <= 10000.0:
+            logging.info("MQTT power_consumption {0}".format(msg.payload))
+            golfonso.power_consumption = float(msg.payload)
+            golfonso.power_consumption_timestamp = datetime.datetime.now()
+    elif msg.topic == "pentling/pv_pentling_fronius/battery_soc":
+        if float(msg.payload) >= 0.0 and float(msg.payload) <= 100.0:
+            logging.info("MQTT battery_soc {0}".format(msg.payload))
+            golfonso.battery_soc = float(msg.payload)
+            golfonso.battery_soc_timestamp = datetime.datetime.now()
 
-mqtt= paho.Client()
+
+mqtt = paho.Client()
 mqtt.on_connect = on_connect
 mqtt.on_message = on_message
 mqtt.connect(mqtt_ip, mqtt_port)
 mqtt.loop_start()
 
 
-
-
 while True:
-    
     golfonso.opmode()
 
     time.sleep(5)
-
