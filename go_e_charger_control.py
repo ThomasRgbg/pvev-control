@@ -113,14 +113,14 @@ class evcontrol:
     def get_pv_values(self):
         now = datetime.datetime.now()
         delta = datetime.timedelta(minutes=1)
-        if (now - (self.pv_power_timestamp + delta)).total_seconds() < 0:
-            return [None, None, None]
+        if (now - (self.pv_power_timestamp + delta)).total_seconds() > 0:
+            return [None, None, None, None]
         if (now - (self.grid_power_timestamp + delta)).total_seconds() > 0:
-            return [None, None, None]
+            return [None, None, None, None]
         if (now - (self.power_consumption_timestamp + delta)).total_seconds() > 0:
-            return [None, None, None]
+            return [None, None, None, None]
         if (now - (self.battery_soc_timestamp + delta)).total_seconds() > 0:
-            return [None, None, None]
+            return [None, None, None, None]
 
         return [self.pv_power, self.grid_power, self.power_consumption, self.battery_soc]
 
@@ -168,6 +168,7 @@ class evcontrol:
         self.modechange = True
         self.write_value_to_db('mode', newmode, force=True)
         config.set('parameters', 'mode', str(newmode))
+        self.save_settings_to_config()
 
     def state_max_auto_charging(self):
         self.modechange = False
@@ -255,76 +256,43 @@ class evcontrol:
 
         self.update_values_after()
 
-        if self.go_e_charger.CableLocked() == True:
-            self.disconnectcounter = 0
-        else:
-            self.disconnectcounter += 1
-        
-        logging.info("disconnectcounter {0}".format(self.disconnectcounter))
-        if self.disconnectcounter > 15:
-            self.disconnectcounter = 0
-            self.change_mode(1)
+        self.check_disconnect(fallback_mode=1)
 
     
     def state_manual_charging(self):
         self.modechange = False
         self.debugstate = 20
 
-        if self.go_e_charger.CableLocked() == True:
-            self.disconnectcounter = 0
-        else:
-            self.disconnectcounter += 1
-        
-        logging.info("disconnectcounter {0}".format(self.disconnectcounter))
-        if self.disconnectcounter > 15:
-            self.disconnectcounter = 0
-            self.change_mode(1)
-
         self.power_available = [0.0]
         self.update_values_before()
         self.do_sleep(55)
         self.update_values_after()
+        self.check_disconnect(fallback_mode=1)
+
     
     def state_force_on_charging(self):
         self.modechange = False
         self.debugstate = 21
-        
-        if self.go_e_charger.CableLocked() == True:
-            self.disconnectcounter = 0
-        else:
-            self.disconnectcounter += 1
-        
-        logging.info("disconnectcounter {0}".format(self.disconnectcounter))
-        if self.disconnectcounter > 15:
-            self.disconnectcounter = 0
-            self.change_mode(1)
-        
+                
         self.update_values_before()
         self.power_available = [self.max_charge_power]
         self.do_switching(1, force=True)
         self.do_sleep(55)
         self.update_values_after()
+        self.check_disconnect(fallback_mode=1)
+
     
     def state_force_off_charging(self):
         self.modechange = False
         self.debugstate = 22
-
-        if self.go_e_charger.CableLocked() == True:
-            self.disconnectcounter = 0
-        else:
-            self.disconnectcounter += 1
-        
-        logging.info("disconnectcounter {0}".format(self.disconnectcounter))
-        if self.disconnectcounter > 15:
-            self.disconnectcounter = 0
-            self.change_mode(22)
-
 
         self.update_values_before()
         self.power_available = [0.0]
         self.do_switching(100000, force=True)
         self.do_sleep(360)
         self.update_values_after()
+        self.check_disconnect(fallback_mode=1)
+
 
     def state_pricelim_charging(self):
         self.modechange = False
@@ -347,17 +315,28 @@ class evcontrol:
         logging.info("------------------------------------------")
         self.do_sleep(55)
 
+        self.update_values_after()
+        self.check_disconnect(fallback_mode=1)
+
+        
+    def check_disconnect(self, fallback_mode):
         if self.go_e_charger.CableLocked() == True:
             self.disconnectcounter = 0
         else:
             self.disconnectcounter += 1
-        
-        logging.info("disconnectcounter {0}".format(self.disconnectcounter))
-        if self.disconnectcounter > 15:
-            self.disconnectcounter = 0
-            self.change_mode(22)
 
-        self.update_values_after()
+        if self.disconnectcounter > 15:
+            logging.info("reached disconnectcounter {0}, fallback to mode {1}".format(self.disconnectcounter,fallback_mode))
+            self.disconnectcounter = 0
+            self.change_mode(fallback_mode)
+        
+    def save_settings_to_config(self):
+        config.set('parameters', 'charge_below_price', str(self.charge_below_price))
+        config.set('parameters', 'house_battery_soc_min', str(self.house_battery_soc_min))
+        config.set('parameters', 'max_charge_power', str(self.max_charge_power))
+        config.set('parameters', 'min_charge_power', str(self.min_charge_power))
+        with open(config.configfile, 'w') as f:
+            config.write(f)
 
     def update_values_before(self):
         [pv_power, grid_power, power_consumption, battery_soc] = self.get_pv_values()
@@ -379,20 +358,6 @@ class evcontrol:
 
         self.write_value_to_db('power_to_ev', self.power_to_ev)
         self.write_value_to_db('charge_below_price', self.charge_below_price)
-        config.set('parameters', 'charge_below_price',
-                   str(self.charge_below_price))
-
-        config.set('parameters', 'house_battery_soc_min',
-                   str(self.house_battery_soc_min))
-
-        config.set('parameters', 'max_charge_power',
-                   str(self.max_charge_power))
-
-        config.set('parameters', 'min_charge_power',
-                   str(self.min_charge_power))
-
-        with open(config.configfile, 'w') as f:
-            config.write(f)
 
     def update_values_after(self):
 
@@ -524,6 +489,7 @@ def on_message(client, userdata, msg):
             logging.info("MQTT battery_soc {0}".format(msg.payload))
             golfonso.battery_soc = float(msg.payload)
             golfonso.battery_soc_timestamp = datetime.datetime.now()
+    golfonso.save_settings_to_config()  #call each time to simplify code
 
 
 mqtt = paho.Client()
