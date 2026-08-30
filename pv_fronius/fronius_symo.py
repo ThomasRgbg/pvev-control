@@ -25,8 +25,9 @@ class Symo:
 
         # Format:
         # "name : [register address, data type, unit 1]
-        registers_gen24 = {
-        # Common Block Register   
+        
+        registers_symo = {
+            # Common Block Register
             "Sunspec_SID" : [40001, "uint32", 1],
             "Sunspec_Common_ID" : [40003, "uint16", 1],
             "Sunspec_Common_L" : [40004, "uint16", 1],
@@ -47,19 +48,28 @@ class Symo:
             "AC_Frequency" : [40094, "float", 1],
             "AC_Energy" : [40102, "float", 1],
             "DC_Power" : [40108, "float", 1],
-            
-            "Cabinet_Temperature" : [40110, "float", 1],
             "Operating_State" : [40118, "uint16", 1],
-        # Nameplate model
+            # Nameplate model
             "Nameplate_Continous_AC_Power" : [[40135,40136], "uint16_sunssf", 1],
+            # control model
+            "Control_conn" : [40242, "uint16", 1],
+            # Multiple MPPT
+            "Sunspec_MPPT_ID" : [40264, "uint16", 1],
+            "MPPT_1_DC_Current" : [[40283,40266], "uint16_sunssf", 1],
+            "MPPT_1_DC_Voltage" : [[40284,40267], "uint16_sunssf", 1],
+            "MPPT_1_DC_Power" : [[40285,40268], "uint16_sunssf", 1],
+            "MPPT_2_DC_Current" : [[40303,40266], "uint16_sunssf", 1],
+            "MPPT_2_DC_Voltage" : [[40304,40267], "uint16_sunssf", 1],
+            "MPPT_2_DC_Power" : [[40305,40268], "uint16_sunssf", 1],
+            }
+
+        registers_gen24 = {
+            **registers_symo,
+            "Cabinet_Temperature" : [40110, "float", 1],
             "Nameplate_Battery_Capacity" : [[40151,40152], "uint16_sunssf", 1],
             "Nameplate_Battery_Charge_Power" : [[40155,40156], "uint16_sunssf", 1],
             "Nameplate_Battery_Discharge_Power" : [[40157,40158], "uint16_sunssf", 1],
-        # control model
-            "Control_conn" : [40242, "uint16", 1],
-        # Status model
-            "Isolation_resistance" : [[40236,40237], "uint16_sunssf", 1],
-        # Storage device (Battery)
+            # Storage device (Battery)
             "Sunspec_Battery_ID" : [40354, "uint16", 1],
             "Sunspec_Battery_L" : [40355, "uint16", 1],
             "Battery_Max_Charge_Power" : [[40356,40372], "uint16_sunssf", 1],
@@ -73,15 +83,8 @@ class Symo:
             "Battery_InWRte" : [[40367,40379], "int16_sunssf", 1],
             "Battery_InOutWRte_RvrtTm" : [40369, "uint16", 1],
             "Battery_ChaGriSet" : [40371, "uint16", 1],
-        # Multiple MPPT
-            "Sunspec_MPPT_ID" : [40264, "uint16", 1],
-            "MPPT_1_DC_Current" : [[40283,40266], "uint16_sunssf", 1],
-            "MPPT_1_DC_Voltage" : [[40284,40267], "uint16_sunssf", 1],
-            "MPPT_1_DC_Power" : [[40285,40268], "uint16_sunssf", 1],
+            # Multiple MPPT (3 & 4)
             "MPPT_1_DC_Energy" : [[40286,40269], "acc32_sunssf", 1],
-            "MPPT_2_DC_Current" : [[40303,40266], "uint16_sunssf", 1],
-            "MPPT_2_DC_Voltage" : [[40304,40267], "uint16_sunssf", 1],
-            "MPPT_2_DC_Power" : [[40305,40268], "uint16_sunssf", 1],
             "MPPT_2_DC_Energy" : [[40306,40269], "acc32_sunssf", 1],
             "MPPT_3_DC_Current" : [[40323,40266], "uint16_sunssf", 1],
             "MPPT_3_DC_Voltage" : [[40324,40267], "uint16_sunssf", 1],
@@ -91,7 +94,7 @@ class Symo:
             "MPPT_4_DC_Voltage" : [[40344,40267], "uint16_sunssf", 1],
             "MPPT_4_DC_Power" : [[40345,40268], "uint16_sunssf", 1],
             "MPPT_4_DC_Energy" : [[40346,40269], "acc32_sunssf", 1],
-        # Power Meter
+            # Power Meter
             "Sunspec_Meter_ID" : [40070, "uint16", 200],
             "Meter_Frequency" : [40096, "float", 200],
             "Meter_Power_Total" : [40098, "float", 200],
@@ -106,55 +109,6 @@ class Symo:
             "Meter_Real_Energy_Imported_L1" : [40140, "float", 200],
             "Meter_Real_Energy_Imported_L2" : [40142, "float", 200],
             "Meter_Real_Energy_Imported_L3" : [40144, "float", 200],
-        }
-
-        registers_symo = {
-        # Common Block Register   
-            "Sunspec_SID" : [40001, "uint32", 1],
-            "Sunspec_Common_ID" : [40003, "uint16", 1],
-            "Sunspec_Common_L" : [40004, "uint16", 1],
-            "Sunspec_Devicename" : [40021, "string16", 1],
-            "Sunspec_Software Version" : [40045, "string8", 1],
-            "Sunspec_Inverter_ID" : [40070, "uint16", 1],
-            "Sunspec_Inverter_L" : [40071, "uint16", 1],
-            "AC_Phase-A_Current" : [40074, "float", 1],
-            "AC_Phase-B_Current" : [40076, "float", 1],
-            "AC_Phase-C_Current" : [40078, "float", 1],
-            "AC_Voltage_Phase-AB" : [40080, "float", 1],
-            "AC_Voltage_Phase-BC" : [40082, "float", 1],
-            "AC_Voltage_Phase-CA" : [40084, "float", 1],
-            "AC_Voltage_Phase-A-N" : [40086, "float", 1],
-            "AC_Voltage_Phase-B-N" : [40088, "float", 1],
-            "AC_Voltage_Phase-C-N" : [40090, "float", 1],
-            "AC_Output_Power" : [40092, "float", 1],
-            "AC_Frequency" : [40094, "float", 1],
-            "AC_Energy" : [40102, "float", 1],
-            "DC_Power" : [40108, "float", 1],
-            "Operating_State" : [40118, "uint16", 1],
-        # Nameplate model
-            "Nameplate_Continous_AC_Power" : [[40135,40136], "uint16_sunssf", 1],
-        # Status model
-            # "Isolation_resistance" : [[40236,40237], "uint16_sunssf", 1],
-        # control model
-            "Control_conn" : [40242, "uint16", 1],
-        # Multiple MPPT
-            "Sunspec_MPPT_ID" : [40264, "uint16", 1],
-            "MPPT_1_DC_Current" : [[40283,40266], "uint16_sunssf", 1],
-            "MPPT_1_DC_Voltage" : [[40284,40267], "uint16_sunssf", 1],
-            "MPPT_1_DC_Power" : [[40285,40268], "uint16_sunssf", 1],
-            "MPPT_2_DC_Current" : [[40303,40266], "uint16_sunssf", 1],
-            "MPPT_2_DC_Voltage" : [[40304,40267], "uint16_sunssf", 1],
-            "MPPT_2_DC_Power" : [[40305,40268], "uint16_sunssf", 1],
-        }
-        
-        calculated_parameters_gen24 = {
-            "Consumption_Sum" : ['AC_Output_Power', 'Meter_Power_Total', lambda a, b: a + b],
-            "Battery_Power" : ['MPPT_4_DC_Power', 'MPPT_3_DC_Power', lambda a, b: a - b],
-            "Battery_Current" : ['MPPT_4_DC_Current', 'MPPT_3_DC_Current', lambda a, b: a - b],
-            "PV_Power" : ['MPPT_1_DC_Power', 'MPPT_2_DC_Power', lambda a, b: a + b],
-            "AC_Output_L1" : ['AC_Voltage_Phase-A-N', 'AC_Phase-A_Current', lambda a, b: a * b],
-            "AC_Output_L2" : ['AC_Voltage_Phase-B-N', 'AC_Phase-B_Current', lambda a, b: a * b],
-            "AC_Output_L3" : ['AC_Voltage_Phase-C-N', 'AC_Phase-C_Current', lambda a, b: a * b],
             }
 
         calculated_parameters_symo = {
@@ -163,6 +117,14 @@ class Symo:
             "AC_Output_L2" : ['AC_Voltage_Phase-B-N', 'AC_Phase-B_Current', lambda a, b: a * b],
             "AC_Output_L3" : ['AC_Voltage_Phase-C-N', 'AC_Phase-C_Current', lambda a, b: a * b],
             }
+
+        calculated_parameters_gen24 = {
+            **calculated_parameters_symo,
+            "Consumption_Sum" : ['AC_Output_Power', 'Meter_Power_Total', lambda a, b: a + b],
+            "Battery_Power" : ['MPPT_4_DC_Power', 'MPPT_3_DC_Power', lambda a, b: a - b],
+            "Battery_Current" : ['MPPT_4_DC_Current', 'MPPT_3_DC_Current', lambda a, b: a - b],
+            }
+
 
         self.modbus.unit_id = 1
         sunspecid = self.read_uint16(40070)
