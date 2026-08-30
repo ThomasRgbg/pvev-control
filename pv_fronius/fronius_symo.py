@@ -14,8 +14,6 @@ import time
 import math
 import logging
 
-# Overwrites, so remove
-# logging.basicConfig(format='fronius_symo: %(message)s', level=logging.INFO)
 
 
 class Symo:
@@ -24,7 +22,6 @@ class Symo:
         self.modbus = ModbusClient(host=ipaddr, port=502, auto_open=True, auto_close=True)
         self.model = model
         self.name = "Unkown"
-        # self.modbus.debug(True)
 
         # Format:
         # "name : [register address, data type, unit 1]
@@ -61,7 +58,7 @@ class Symo:
         # control model
             "Control_conn" : [40242, "uint16", 1],
         # Status model
-            # "Isolation_resistance" : [[40236,40237], "uint16_sunssf", 1],
+            "Isolation_resistance" : [[40236,40237], "uint16_sunssf", 1],
         # Storage device (Battery)
             "Sunspec_Battery_ID" : [40354, "uint16", 1],
             "Sunspec_Battery_L" : [40355, "uint16", 1],
@@ -136,6 +133,8 @@ class Symo:
             "Operating_State" : [40118, "uint16", 1],
         # Nameplate model
             "Nameplate_Continous_AC_Power" : [[40135,40136], "uint16_sunssf", 1],
+        # Status model
+            # "Isolation_resistance" : [[40236,40237], "uint16_sunssf", 1],
         # control model
             "Control_conn" : [40242, "uint16", 1],
         # Multiple MPPT
@@ -149,20 +148,20 @@ class Symo:
         }
         
         calculated_parameters_gen24 = {
-            "Consumption_Sum" : ['AC_Output_Power', 'Meter_Power_Total', '+'],
-            "Battery_Power" : ['MPPT_4_DC_Power', 'MPPT_3_DC_Power', '-'],
-            "Battery_Current" : ['MPPT_4_DC_Current', 'MPPT_3_DC_Current', '-'],
-            "PV_Power" : ['MPPT_1_DC_Power', 'MPPT_2_DC_Power', '+'],
-            "AC_Output_L1" : ['AC_Voltage_Phase-A-N', 'AC_Phase-A_Current', '*'],
-            "AC_Output_L2" : ['AC_Voltage_Phase-B-N', 'AC_Phase-B_Current', '*'],
-            "AC_Output_L3" : ['AC_Voltage_Phase-C-N', 'AC_Phase-C_Current', '*'],
+            "Consumption_Sum" : ['AC_Output_Power', 'Meter_Power_Total', lambda a, b: a + b],
+            "Battery_Power" : ['MPPT_4_DC_Power', 'MPPT_3_DC_Power', lambda a, b: a - b],
+            "Battery_Current" : ['MPPT_4_DC_Current', 'MPPT_3_DC_Current', lambda a, b: a - b],
+            "PV_Power" : ['MPPT_1_DC_Power', 'MPPT_2_DC_Power', lambda a, b: a + b],
+            "AC_Output_L1" : ['AC_Voltage_Phase-A-N', 'AC_Phase-A_Current', lambda a, b: a * b],
+            "AC_Output_L2" : ['AC_Voltage_Phase-B-N', 'AC_Phase-B_Current', lambda a, b: a * b],
+            "AC_Output_L3" : ['AC_Voltage_Phase-C-N', 'AC_Phase-C_Current', lambda a, b: a * b],
             }
 
         calculated_parameters_symo = {
-            "PV_Power" : ['MPPT_1_DC_Power', 'MPPT_2_DC_Power', '+'],
-            "AC_Output_L1" : ['AC_Voltage_Phase-A-N', 'AC_Phase-A_Current', '*'],
-            "AC_Output_L2" : ['AC_Voltage_Phase-B-N', 'AC_Phase-B_Current', '*'],
-            "AC_Output_L3" : ['AC_Voltage_Phase-C-N', 'AC_Phase-C_Current', '*'],
+            "PV_Power" : ['MPPT_1_DC_Power', 'MPPT_2_DC_Power', lambda a, b: a + b],
+            "AC_Output_L1" : ['AC_Voltage_Phase-A-N', 'AC_Phase-A_Current', lambda a, b: a * b],
+            "AC_Output_L2" : ['AC_Voltage_Phase-B-N', 'AC_Phase-B_Current', lambda a, b: a * b],
+            "AC_Output_L3" : ['AC_Voltage_Phase-C-N', 'AC_Phase-C_Current', lambda a, b: a * b],
             }
 
         self.modbus.unit_id = 1
@@ -329,23 +328,18 @@ class Symo:
             return False
         
     def read_calculated_value(self, parameter):
-        [param1, param2, operant] = self.calculated_parameters[parameter]
+        param1, param2, op = self.calculated_parameters[parameter]
+
+        v1 = self.read_data(param1)
+        v2 = self.read_data(param2)
+        if v1 is None or v1 is False or v2 is None or v2 is False:
+            return None
 
         try:
-            if operant == '+':
-                value = self.read_data(param1) + self.read_data(param2)
-            elif operant == '-':
-                value = self.read_data(param1) - self.read_data(param2)
-            elif operant == '*':
-                value = self.read_data(param1) * self.read_data(param2)
-            elif operant == '/':
-                value = self.read_data(param1) / self.read_data(param2)
-            else:
-                return False
-        except TypeError:
-            return False
+            return op(v1, v2)
+        except ZeroDivisionError:
+            return None
 
-        return value
 
     def write_float(self, addr, value):
         floats_list = [value]
@@ -482,15 +476,20 @@ class Symo:
         logging.info(self.read_uint16(40241))
         logging.info(self.read_uint16(40242))
         logging.info(self.read_uint16(40243))
-        self.write_uint16(40230,300)
-        self.write_uint16(40242,0)
-        time.sleep(90)
-        self.write_uint16(40242,1)
+        # self.write_uint16(40230,300)
+        # self.write_uint16(40242,0)
+        # time.sleep(90)
+        # self.write_uint16(40242,1)
         logging.info(self.read_uint16(40246))
 
     
 # Test area
 if __name__ == "__main__":
+
+    logging.basicConfig(format='fronius_symo: %(message)s', level=logging.INFO)
+    # logging.basicConfig(format='fronius_symo: %(message)s', level=logging.DEBUG)
+
+
     import argparse
     argparser = argparse.ArgumentParser()
     argparser.add_argument("-a", "--address", help="IP address Fronius Symo", 
@@ -529,7 +528,7 @@ if __name__ == "__main__":
     #    symo.write_uint16(40366,400)
     #    symo.write_uint16(40358,3)
 
-        #symo.trigger_isolation_measurement()
+        symo.trigger_isolation_measurement()
 
     #    Isolationsmessung triggern ? 
     #    symo.write_uint16(40230,300)
