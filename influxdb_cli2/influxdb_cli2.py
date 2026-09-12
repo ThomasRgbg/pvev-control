@@ -10,7 +10,7 @@ from influxdb_client.client.write_api import SYNCHRONOUS
 
 from datetime import datetime, timedelta, timezone
 import logging
-logging.basicConfig(format='influxdb_cli2: %(message)s', level=logging.INFO)
+# logging.basicConfig(format='influxdb_cli2: %(message)s', level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
