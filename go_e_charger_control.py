@@ -112,7 +112,7 @@ class evcontrol:
 
     def get_pv_values(self):
         now = datetime.datetime.now()
-        delta = datetime.timedelta(minutes=1)
+        delta = datetime.timedelta(minutes=3)
         if (now - (self.pv_power_timestamp + delta)).total_seconds() > 0:
             return [None, None, None, None]
         if (now - (self.grid_power_timestamp + delta)).total_seconds() > 0:
