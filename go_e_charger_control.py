@@ -343,13 +343,18 @@ class evcontrol:
 
         if pv_power is None or grid_power is None or battery_soc is None:
             self.errcount += 1
-        else:
+
+        if grid_power is not None:
             self.power_to_grid = grid_power * - 1.0
+        if pv_power is not None:
             self.power_generated = pv_power
+        if battery_soc is not None:
             self.house_battery_soc = battery_soc
+        if power_consumption is not None:
+            self.power_consumption = power_consumption
 
         # self.power_to_grid = self.gen24.read_data("Meter_Power_Total") * -1.0
-        self.power_consumption = self.gen24.read_calculated_value("Consumption_Sum") 
+        # self.power_consumption = self.gen24.read_calculated_value("Consumption_Sum") 
         #s elf.power_generated = self.gen24.read_calculated_value("PV_Power")
         self.power_to_ev = self.go_e_charger.P_All
         # self.house_battery_soc = self.gen24.read_data("Battery_SoC")
@@ -475,12 +480,12 @@ def on_message(client, userdata, msg):
             golfonso.pv_power = float(msg.payload)
             golfonso.pv_power_timestamp = datetime.datetime.now()
     elif msg.topic == "pentling/pv_pentling_fronius/grid_power":
-        if float(msg.payload) >= 0.0 and float(msg.payload) <= 10000.0:
+        if float(msg.payload) >= -50000.0 and float(msg.payload) <= 50000.0:
             logging.info("MQTT grid_power {0}".format(msg.payload))
             golfonso.grid_power = float(msg.payload)
             golfonso.grid_power_timestamp = datetime.datetime.now()
     elif msg.topic == "pentling/pv_pentling_fronius/power_consumption":
-        if float(msg.payload) >= 0.0 and float(msg.payload) <= 10000.0:
+        if float(msg.payload) >= -50000.0 and float(msg.payload) <= 50000.0:
             logging.info("MQTT power_consumption {0}".format(msg.payload))
             golfonso.power_consumption = float(msg.payload)
             golfonso.power_consumption_timestamp = datetime.datetime.now()
