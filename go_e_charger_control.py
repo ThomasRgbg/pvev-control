@@ -23,7 +23,11 @@ import logging
 import statistics
 import os
 
-logging.basicConfig(format='go_e_charger_control: %(message)s', level=logging.INFO)
+logging.basicConfig(
+    format='%(asctime)s go_e_charger_control: %(message)s',
+    datefmt='%H:%M:%S',
+    level=logging.INFO,
+)
 
 config = ConfigParser(delimiters='=')
 config.configfile = os.path.dirname(os.path.realpath(__file__)) + '/config/go_e_charger_control.cfg'
