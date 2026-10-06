@@ -95,7 +95,6 @@ class evcontrol:
         oldmode = self.get_setting_from_db('mode')
         if oldmode:
             logging.info("Reuse last mode from DB")
-            self.change_mode(oldmode)
             self.max_charge_power = float(config.get('parameters',
                                                      'max_charge_power',
                                                      fallback=8000.0))
@@ -103,6 +102,8 @@ class evcontrol:
             self.min_charge_power = float(config.get('parameters',
                                                      'min_charge_power',
                                                      fallback=0.0))
+            self.change_mode(oldmode)
+
 
         else:
             logging.info("Use default mode")
