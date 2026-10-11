@@ -98,6 +98,8 @@ parameters = symo.get_all_parameters()
 parameter_ignore = 'Sunspec'
 calculated_parameters = symo.get_all_calculated()
 
+i = 0
+
 while True:
 
     for name in parameters:
@@ -108,7 +110,8 @@ while True:
         if args.verbose:
             logging.info('{0} = {1}'.format(name, value))
 
-        influxdb.write_sensordata(influxdb_table, name, value)
+        if i == 0:
+            influxdb.write_sensordata(influxdb_table, name, value)
 
         if mqtt is not None and name in mqtt.pv_publish_fronius:
             topic = mqtt.pv_topic + '/' + mqtt.pv_publish_name[mqtt.pv_publish_fronius.index(name)]
@@ -126,7 +129,8 @@ while True:
         if args.verbose:
             logging.info('{0} = {1}'.format(name, value))
 
-        influxdb.write_sensordata(influxdb_table, name, value)
+        if i == 0:
+            influxdb.write_sensordata(influxdb_table, name, value)
 
         if mqtt is not None and name in mqtt.pv_publish_fronius:
             topic = mqtt.pv_topic + '/' + mqtt.pv_publish_name[mqtt.pv_publish_fronius.index(name)]
@@ -136,4 +140,8 @@ while True:
 
         time.sleep(0.02)
 
-    time.sleep(60)
+    i += 1
+    if i > 4:
+        i = 0
+
+    time.sleep(15)
