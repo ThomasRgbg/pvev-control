@@ -14,7 +14,11 @@ from influxdb_cli2.influxdb_cli2 import influxdb_cli2
 from pv_fronius.fronius_symo import Symo
 
 
-logging.basicConfig(format='fronius_influxdb: %(message)s', level=logging.INFO)
+logging.basicConfig(
+    format='%(asctime)s fronius_influxdb: %(message)s',
+    datefmt='%H:%M:%S',
+    level=logging.INFO,
+)
 
 
 argparser = argparse.ArgumentParser()
