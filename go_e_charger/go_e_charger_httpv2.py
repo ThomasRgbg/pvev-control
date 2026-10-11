@@ -225,10 +225,10 @@ class GoeCharger:
 
     def CableLocked(self):
         if int(self.GetStatusParam('cable_unlock_status')) == 3:
-            print("Cable locked")
+            # print("Cable locked")
             return True
         else:
-            print("Cable not locked")
+            # print("Cable not locked")
             return False
 
     @property
@@ -268,7 +268,7 @@ class GoeCharger:
     @property
     def P_All(self):
         values = self.GetStatusParam('energy_array')
-        print(values)
+        # print(values)
         return values['p_all']
 
     def setChargingP(self, power):
@@ -292,7 +292,7 @@ class GoeCharger:
         amps = int(power / 230)
         if amps > 16:
             amps = 16
-        print("set_charging_p to {0} A".format(amps))
+        # print("set_charging_p to {0} A".format(amps))
         # if self.values['i_charge_cur_set'] != amps:
         self.ChargerMaxCurrent = amps
         time.sleep(10)
