@@ -212,9 +212,9 @@ class evcontrol:
 
         self.do_switching(6*230.0)
 
-        if statistics.fmean(self.power_available) > 1000:
+        if statistics.fmean(self.power_generated) > 500:
             self.do_sleep(10)
-        elif statistics.fmean(self.power_available) > 100:
+        elif statistics.fmean(self.power_generated) > 0:
             self.do_sleep(55)
         else:
             self.do_sleep(360)
