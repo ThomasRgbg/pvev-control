@@ -212,9 +212,9 @@ class evcontrol:
 
         self.do_switching(6*230.0)
 
-        if self.power_generated > 1000:
+        if self.power_generated > 800.0:
             self.do_sleep(10)
-        elif self.power_generated > 0:
+        elif self.power_generated > 0.0:
             self.do_sleep(55)
         else:
             self.do_sleep(360)
