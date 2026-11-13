@@ -84,7 +84,7 @@ class evcontrol:
         self.battery_soc_timestamp = datetime.datetime.now()
 
 
-        self.house_battery_soc_min = int(config.get('parameters',
+        self.house_battery_soc_min = float(config.get('parameters',
                                                     'house_battery_soc_min',
                                                     fallback=30))
 
