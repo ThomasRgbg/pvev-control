@@ -1,6 +1,6 @@
 influxdb-client
 
-# fronius-symo
+# fronius-symo and go-e Modbus TCP
 pyModbusTCP
 
 # go_e_charger_control

@@ -7,7 +7,7 @@
 # V4 rework to use configfile and MQTT of direct PV API access.
 
 from influxdb_cli2.influxdb_cli2 import influxdb_cli2
-from go_e_charger.go_e_charger_httpv2 import GoeCharger
+from go_e_charger import open_charger
 from pv_fronius.fronius_symo import Symo
 
 from config_data import *
@@ -33,7 +33,15 @@ config = ConfigParser(delimiters='=')
 config.configfile = os.path.dirname(os.path.realpath(__file__)) + '/config/go_e_charger_control.cfg'
 config.read(config.configfile)
 
-go_e_charger = GoeCharger(ipaddr=config.get('go_e_charger', 'ipaddr'))
+go_e_protocol = config.get('go_e_charger', 'protocol', fallback='http')
+go_e_charger = open_charger(
+    ipaddr=config.get('go_e_charger', 'ipaddr'),
+    protocol=go_e_protocol,
+    port=config.getint('go_e_charger', 'modbus_port', fallback=502),
+    unit_id=config.getint('go_e_charger', 'modbus_unit_id', fallback=1),
+    ampere_storage=config.get('go_e_charger', 'ampere_storage', fallback='volatile'),
+)
+logging.info("go-e charger via {0}".format(go_e_protocol))
 
 influxdb2 = influxdb_cli2(config.get('influxdb', 'url', raw=True),
                           token=config.get('influxdb', 'token'),
