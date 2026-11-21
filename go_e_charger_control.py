@@ -212,9 +212,9 @@ class evcontrol:
 
         self.do_switching(6*230.0)
 
-        if self.power_generated > 800.0:
+        if self.power_generated > 800:
             self.do_sleep(10)
-        elif self.power_generated > 0.0:
+        elif self.power_generated > 0:
             self.do_sleep(55)
         else:
             self.do_sleep(360)
@@ -444,10 +444,10 @@ golfonso = evcontrol(go_e_charger, gen24, influxdb2)
 def on_connect(client, userdata, flags, rc):
     logging.debug("MQTT Connection returned result: " + str(rc))
     client.subscribe("pentling/ev_golf/change_mode", 1)
-    client.subscribe("pentling/ev_golf/max_charge_power", 1)
-    client.subscribe("pentling/ev_golf/min_charge_power", 1)
-    client.subscribe("pentling/ev_golf/charge_below_price", 1)
-    client.subscribe("pentling/ev_golf/house_battery_soc_min", 1)
+    client.subscribe("pentling/ev_golf/max_charge_power_set", 1)
+    client.subscribe("pentling/ev_golf/min_charge_power_set", 1)
+    client.subscribe("pentling/ev_golf/charge_below_price_set", 1)
+    client.subscribe("pentling/ev_golf/house_battery_soc_min_set", 1)
     client.subscribe("pentling/pv_pentling_fronius/pv_power", 1)
     client.subscribe("pentling/pv_pentling_fronius/grid_power", 1)
     client.subscribe("pentling/pv_pentling_fronius/power_consumption", 1)
@@ -461,21 +461,21 @@ def on_message(client, userdata, msg):
         if int(msg.payload) >= 0 and int(msg.payload) <= 99:
             logging.info("MQTT Change state {0}".format(msg.payload))
             golfonso.change_mode(int(msg.payload))
-    elif msg.topic == "pentling/ev_golf/max_charge_power":
+    elif msg.topic == "pentling/ev_golf/max_charge_powe_set":
         if int(msg.payload) >= 0 and int(msg.payload) <= 8000:
             logging.info("MQTT max charge power {0}".format(msg.payload))
             golfonso.max_charge_power = int(msg.payload)
-    elif msg.topic == "pentling/ev_golf/min_charge_power":
+    elif msg.topic == "pentling/ev_golf/min_charge_power_set":
         if int(msg.payload) >= 0 and int(msg.payload) <= 8000:
             logging.info("MQTT min charge power {0}".format(msg.payload))
             golfonso.min_charge_power = int(msg.payload)
-    elif msg.topic == "pentling/ev_golf/charge_below_price":
+    elif msg.topic == "pentling/ev_golf/charge_below_price_set":
         if float(msg.payload) >= 0.0 and float(msg.payload) <= 2.0:
             logging.info("MQTT charge_below_price {0}".format(msg.payload))
             golfonso.charge_below_price = float(msg.payload)
             golfonso.write_value_to_db('charge_below_price',
                                        golfonso.charge_below_price, force=True)
-    elif msg.topic == "pentling/ev_golf/house_battery_soc_min":
+    elif msg.topic == "pentling/ev_golf/house_battery_soc_min_set":
         if float(msg.payload) >= 0.0 and float(msg.payload) <= 100.0:
             logging.info("MQTT house_battery_soc_min {0}".format(msg.payload))
             golfonso.house_battery_soc_min = float(msg.payload)
