@@ -1,0 +1,29 @@
+# Copy to config/go_e_charger_control.cfg and fill in the local addresses.
+# The control script rewrites this file when a mode changes.
+
+[go_e_charger]
+ipaddr = 192.168.0.12
+influxdb_table = ev_car
+
+# http  - local HTTP API (historical default)
+# modbus - Modbus TCP. Enable it in the go-e app, or set men=true once.
+protocol = http
+modbus_port = 502
+modbus_unit_id = 1
+
+# Used only when protocol = modbus.
+# volatile writes AMPERE_VOLATILE and does not wear the EEPROM.
+# eeprom writes AMPERE_EEPROM, which is what HTTP key amp does.
+ampere_storage = volatile
+
+[influxdb]
+url = http://192.168.0.100:8086
+token = mytoken==
+org = home
+bucket = home/autogen
+
+[parameters]
+house_battery_soc_min = 30
+charge_below_price = 0.0
+max_charge_power = 8000
+min_charge_power = 0

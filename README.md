@@ -8,6 +8,8 @@ Drivers
 
 * go_e_charger/go_e_charger_httpv2.py - (Local) http API based access to a Go-E Wallbox. Beside of the usual stuff a bit of more comfortable control of the charging power (currently a bit hardcoded for 1/2 phase operation and would need some rework for 1/3 phases... however there is not really a good way to detect if a car supports only 2 like my eGolf or 3 phases)
 
+* go_e_charger/go_e_charger_modbus.py - Same wallbox operations over Modbus TCP. `go_e_charger_control.py` selects the transport with `protocol` in `config/go_e_charger_control.cfg` (`http` or `modbus`). Modbus is the better fit for the control loop: the ampere setpoint is written to the volatile register, so the EEPROM is not worn out, and each poll is a few registers instead of the whole HTTP status document. See `config/go_e_charger_control.cfg.example`.
+
 * influxdb_cli2/influxdb_cli2.py - just some boring Influx DB access for reading and writing data
 
 
